@@ -36,6 +36,8 @@
 
         public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
         {
+            _ = builder ?? throw new ArgumentNullException(nameof(builder));
+
             return builder.RegisterConfigurationRoot<T>()
                 .ConfigureServices((context, services) =>
                 {
