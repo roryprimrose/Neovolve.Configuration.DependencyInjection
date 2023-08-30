@@ -6,19 +6,19 @@
 		<!--<GeneratePackageOnBuild>True</GeneratePackageOnBuild>-->
 		<!--<TreatWarningsAsErrors>True</TreatWarningsAsErrors>-->
 		<NeutralLanguage>en-US</NeutralLanguage>
+		<LangVersion>latest</LangVersion>
 
-		<Title>Automatic registration for application configuration</Title>
+		<Title>Configuration binding dependency injection support with hot reload</Title>
 		<Authors>Rory Primrose</Authors>
 		<Company>Neovolve</Company>
-		<Description>This library contains an Autofac module to register configuration types.</Description>
-		<Copyright>Copyright © Neovolve 2018</Copyright>
+		<Description>This library contains IHostBuilder extension methods to register configuration types with hot reload.</Description>
+		<Copyright>Copyright © Neovolve 2023</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</RepositoryUrl>
 		<PackageTags>Configuration</PackageTags>
 		<IncludeSymbols>true</IncludeSymbols>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<LangVersion>latest</LangVersion>
 	</PropertyGroup>
 
 	<ItemGroup>
