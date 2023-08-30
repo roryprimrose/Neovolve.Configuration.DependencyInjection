@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.0</TargetFrameworks>
+		<DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Neovolve.Configuration.DependencyInjection.xml</DocumentationFile>
+		<!--<GeneratePackageOnBuild>True</GeneratePackageOnBuild>-->
+		<!--<TreatWarningsAsErrors>True</TreatWarningsAsErrors>-->
+		<NeutralLanguage>en-US</NeutralLanguage>
+
+		<Title>Automatic registration for application configuration</Title>
+		<Authors>Rory Primrose</Authors>
+		<Company>Neovolve</Company>
+		<Description>This library contains an Autofac module to register configuration types.</Description>
+		<Copyright>Copyright © Neovolve 2018</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</RepositoryUrl>
+		<PackageTags>Configuration</PackageTags>
+		<IncludeSymbols>true</IncludeSymbols>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.4" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+	</ItemGroup>
+
+</Project>
