@@ -4,6 +4,13 @@
 
     public abstract class TimerHostedService : BackgroundService
     {
+        private readonly TimeSpan _delay;
+
+        protected TimerHostedService(TimeSpan delay)
+        {
+            _delay = delay;
+        }
+
         // Could also be a async method, that can be awaited in ExecuteAsync above
         protected abstract Task DoWork(CancellationToken cancellationToken);
 
@@ -12,7 +19,7 @@
             // When the timer should have no due-time, then do the work once now.
             await DoWork(stoppingToken).ConfigureAwait(false);
 
-            using PeriodicTimer timer = new(TimeSpan.FromSeconds(5));
+            using PeriodicTimer timer = new(_delay);
 
             try
             {

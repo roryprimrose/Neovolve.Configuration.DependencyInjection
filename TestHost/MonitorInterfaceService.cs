@@ -1,23 +1,18 @@
 ﻿namespace TestHost;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-internal class MonitorInterfaceService : TimerHostedService
+internal class MonitorInterfaceService : ConsoleUpdateService
 {
     private readonly IOptionsMonitor<IFirstConfig> _config;
-    private readonly ILogger<MonitorInterfaceService> _logger;
 
-    public MonitorInterfaceService(IOptionsMonitor<IFirstConfig> config, ILogger<MonitorInterfaceService> logger)
+    public MonitorInterfaceService(IOptionsMonitor<IFirstConfig> config)
     {
         _config = config;
-        _logger = logger;
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        _logger.LogInformation(_config.CurrentValue.FirstValue);
-
-        return Task.CompletedTask;
+        return WriteValue(_config.CurrentValue.FirstValue);
     }
 }

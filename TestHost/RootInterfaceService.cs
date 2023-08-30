@@ -1,23 +1,16 @@
 ﻿namespace TestHost;
 
-using Microsoft.Extensions.Logging;
-
-internal class RootInterfaceService : TimerHostedService
+internal class RootInterfaceService : ConsoleUpdateService
 {
     private readonly Config _config;
-    private readonly ILogger<RootInterfaceService> _logger;
 
-    public RootInterfaceService(Config config, ILogger<RootInterfaceService> logger)
+    public RootInterfaceService(Config config)
     {
         _config = config;
-        _logger = logger;
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        //Console.WriteLine("Root: " + _config.CurrentValue.RootValue);
-        _logger.LogInformation(_config.RootValue);
-
-        return Task.CompletedTask;
+        return WriteValue(_config.RootValue);
     }
 }
