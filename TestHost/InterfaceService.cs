@@ -1,22 +1,16 @@
 ﻿namespace TestHost;
 
-using Microsoft.Extensions.Logging;
-
-internal class InterfaceService : TimerHostedService
+internal class InterfaceService : ConsoleUpdateService
 {
     private readonly ISecondConfig _config;
-    private readonly ILogger<InterfaceService> _logger;
 
-    public InterfaceService(ISecondConfig config, ILogger<InterfaceService> logger)
+    public InterfaceService(ISecondConfig config)
     {
         _config = config;
-        _logger = logger;
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        _logger.LogInformation(_config.SecondValue);
-
-        return Task.CompletedTask;
+        return WriteValue(_config.SecondValue);
     }
 }

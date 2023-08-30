@@ -1,23 +1,18 @@
 ﻿namespace TestHost;
 
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-internal class SnapshotInterfaceService : TimerHostedService
+internal class SnapshotInterfaceService : ConsoleUpdateService
 {
     private readonly IOptionsSnapshot<IThirdConfig> _config;
-    private readonly ILogger<SnapshotInterfaceService> _logger;
 
-    public SnapshotInterfaceService(IOptionsSnapshot<IThirdConfig> config, ILogger<SnapshotInterfaceService> logger)
+    public SnapshotInterfaceService(IOptionsSnapshot<IThirdConfig> config)
     {
         _config = config;
-        _logger = logger;
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        _logger.LogInformation(_config.Value.ThirdValue);
-
-        return Task.CompletedTask;
+        return WriteValue(_config.Value.ThirdValue);
     }
 }
