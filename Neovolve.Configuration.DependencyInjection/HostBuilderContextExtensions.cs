@@ -1,6 +1,7 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
     using System.Reflection;
@@ -10,8 +11,9 @@
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
-    public static class HostBuilderContextExtensions
+    public static partial class HostBuilderContextExtensions
     {
+        private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.CopyValues";
         private static readonly Type _extensionType = typeof(HostBuilderContextExtensions);
 
         private static readonly MethodInfo _registerConfigTypeMember =
@@ -22,9 +24,11 @@
 
         private static readonly MethodInfo _registerConfigInterfaceTypeMember =
             _extensionType.GetMethod(nameof(RegisterConfigInterfaceType), BindingFlags.Static | BindingFlags.NonPublic,
-                null, new[] { typeof(IServiceCollection), typeof(bool) }, null) ??
+                null, new[] { typeof(IServiceCollection) }, null) ??
             throw new InvalidOperationException(
                 $"Unable to find {_extensionType}.{nameof(RegisterConfigInterfaceType)}<TConcrete, TInterface> method");
+
+        private static readonly ConcurrentDictionary<Type, ILogger> _loggerCache = new();
 
         private static readonly Dictionary<Type, List<PropertyInfo>> _propertyCache = new();
 
@@ -48,6 +52,82 @@
                 });
         }
 
+        private static void CopyValues<T>(IServiceProvider serviceProvider, T injectedConfig, T updatedConfig)
+        {
+            var targetType = typeof(T);
+            var properties = GetProperties(targetType, true);
+            var logger = GetLogger<T>(serviceProvider);
+
+            // The IOptionsMonitor<T>.OnChange event gets triggered twice on a change notification for file based configuration
+            // To prevent noise in logging and updates to properties, we want to try to detect when an actual change has been made
+            // We only want to set a property value if there is a change in the value and we want to only log that changes have
+            // occurred the first time a change is detected
+            var changesFound = false;
+
+            foreach (var property in properties)
+            {
+                try
+                {
+                    var oldValue = property.GetValue(injectedConfig);
+                    var updatedValue = property.GetValue(updatedConfig, null);
+
+                    if (oldValue == null &&
+                        updatedValue == null)
+                    {
+                        // There is no change
+                        continue;
+                    }
+
+                    if (oldValue != null &&
+                        updatedValue != null &&
+                        oldValue.Equals(updatedValue))
+                    {
+                        // Both values exist but they are the same
+                        continue;
+                    }
+
+                    // We have a change to the configuration
+                    if (changesFound == false)
+                    {
+                        if (logger != null)
+                        {
+                            LogConfigChanged(logger, targetType);
+                        }
+
+                        changesFound = true;
+                    }
+
+                    property.SetValue(injectedConfig, updatedValue);
+
+                    if (logger != null)
+                    {
+                        LogConfigChanged(logger, targetType, property.Name, oldValue, updatedValue);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // We have failed to copy the value across to the injected config value
+                    // We don't want to fail the application so we cannot allow the exception to throw up the stack
+                    // We can however attempt to obtain a logger so that we can report the failure
+                    if (logger != null)
+                    {
+                        LogConfigCopyFail(logger, ex, targetType, property.Name);
+                    }
+                }
+            }
+        }
+
+        private static ILogger? GetLogger<T>(IServiceProvider serviceProvider)
+        {
+            return _loggerCache.GetOrAdd(typeof(T), x =>
+            {
+                var factory = serviceProvider.GetService<ILoggerFactory>();
+                var logger = factory?.CreateLogger<T>();
+
+                return logger;
+            });
+        }
+
         private static List<PropertyInfo> GetProperties(Type targetType, bool reloadInjectedTypes)
         {
             if (_propertyCache.TryGetValue(targetType, out var cachedProperties))
@@ -57,8 +137,8 @@
 
             // Either we are not auto-reloading injected types or the properties do not exist in cache yet
             var properties = (from x in targetType.GetProperties()
-                where x.CanRead && x.CanWrite && x.GetMethod.IsPublic && x.SetMethod.IsPublic
-                select x).ToList();
+                              where x.CanRead && x.CanWrite && x.GetMethod.IsPublic && x.SetMethod.IsPublic
+                              select x).ToList();
 
             // We are only going to cache the properties of the target type if auto-reloading injected types is enabled
             // because the property values will continue to be used beyond the initial bootstrapping of the application
@@ -69,6 +149,20 @@
 
             return properties;
         }
+
+        [LoggerMessage(EventId = 5000, EventName = CopyValuesEventName, Level = LogLevel.Information,
+            Message = "Configuration updated on {targetType}")]
+        static partial void LogConfigChanged(ILogger logger, Type targetType);
+
+        [LoggerMessage(EventId = 5001, EventName = CopyValuesEventName, Level = LogLevel.Debug,
+            Message =
+                "Configuration updated on {targetType}.{property} from '{oldValue}' to '{newValue}'")]
+        static partial void LogConfigChanged(ILogger logger, Type targetType, string property, object? oldValue,
+            object? newValue);
+
+        [LoggerMessage(EventId = 5002, EventName = CopyValuesEventName, Level = LogLevel.Error,
+            Message = "Failed to copy hot reload config value for {targetType}.{property}")]
+        static partial void LogConfigCopyFail(ILogger logger, Exception ex, Type targetType, string property);
 
         private static void RegisterChildTypes(HostBuilderContext context, IServiceCollection services, Type owningType,
             string sectionPrefix, bool reloadInjectedTypes)
@@ -116,7 +210,7 @@
                         _registerConfigInterfaceTypeMember.MakeGenericMethod(configType, interfaceType);
 
                     // Call RegisterConfigInterfaceType<PropertyType, InterfaceType>(services, section)
-                    registerConfigInterfaceType.Invoke(null, new object[] { services, reloadInjectedTypes });
+                    registerConfigInterfaceType.Invoke(null, new object[] { services });
                 }
 
                 RegisterChildTypes(context, services, propertyInfo.PropertyType, sectionPath, reloadInjectedTypes);
@@ -124,7 +218,7 @@
         }
 
         private static IServiceCollection RegisterConfigInterfaceType<TConcrete, TInterface>(
-            IServiceCollection services, bool reloadInjectedTypes) where TConcrete : class, TInterface
+            IServiceCollection services) where TConcrete : class, TInterface
             where TInterface : class
         {
             // Add registration to redirect IOptionsMonitor<TConcrete> to IOptionsMonitor<TInterface>
@@ -132,7 +226,7 @@
             {
                 var concreteMonitor = x.GetRequiredService<IOptionsMonitor<TConcrete>>();
 
-                var interfaceMonitor = new MonitorRedirect<TConcrete, TInterface>(concreteMonitor);
+                var interfaceMonitor = new MonitorProxy<TConcrete, TInterface>(concreteMonitor);
 
                 return interfaceMonitor;
             });
@@ -142,7 +236,7 @@
             {
                 var concreteSnapshot = x.GetRequiredService<IOptionsSnapshot<TConcrete>>();
 
-                return new SnapshotRedirect<TConcrete, TInterface>(concreteSnapshot);
+                return new SnapshotProxy<TConcrete, TInterface>(concreteSnapshot);
             });
 
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
@@ -151,14 +245,6 @@
                 var options = x.GetRequiredService<IOptionsMonitor<TConcrete>>();
 
                 var injectedValue = options.CurrentValue;
-                
-                // If we are auto-reloading injected types then set up the event so that we can copy across the config values
-                if (reloadInjectedTypes)
-                {
-                    // Respond to config changes and copy across config changes to the original injected value
-                    // This will work because the classes are reference types
-                    options.OnChange((config, name) => { CopyValues(x, injectedValue, config); });
-                }
 
                 return (TInterface)injectedValue;
             });
@@ -171,7 +257,7 @@
         {
             // Configure this type so that we can get access to IOptions<T>, IOptionsSnapshot<T> and IOptionsMonitor<T>
             services.Configure<T>(section);
-            
+
             // Configure the injection of T as a single instance
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
             services.AddSingleton(x =>
@@ -185,39 +271,13 @@
                 {
                     // Respond to config changes and copy across config changes to the original injected value
                     // This will work because the classes are reference types
-                    options.OnChange((config, name) => { CopyValues(x, injectedValue, config); });
+                    options.OnChange((config, _) => { CopyValues(x, injectedValue, config); });
                 }
 
                 return injectedValue;
             });
 
             return services;
-        }
-
-        private static void CopyValues<T>(IServiceProvider serviceProvider, T injectedConfig, T updatedConfig)
-        {
-            var targetType = typeof(T);
-            var properties = GetProperties(targetType, true);
-
-            foreach (var property in properties)
-            {
-                try
-                {
-                    var updatedValue = property.GetValue(updatedConfig, null);
-
-                    property.SetValue(injectedConfig, updatedValue);
-                }
-                catch (Exception ex)
-                {
-                    // We have failed to copy the value across to the injected config value
-                    // We don't want to fail the application so we cannot allow the exception to throw up the stack
-                    // We can however attempt to obtain a logger so that we can report the failure
-                    var factory = serviceProvider.GetService<ILoggerFactory>();
-                    var logger = factory?.CreateLogger<T>();
-
-                    logger?.LogError(ex, "Failed to copy hot reload config value for {targetType}.{property}", targetType, property);
-                }
-            }
         }
 
         private static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder) where T : class
@@ -241,70 +301,5 @@
 
             return builder;
         }
-    }
-
-    internal class MonitorRedirect<TConcrete, TInterface> : IOptionsMonitor<TInterface>
-        where TConcrete : class, TInterface
-    {
-        private readonly IOptionsMonitor<TConcrete> _options;
-
-        public MonitorRedirect(IOptionsMonitor<TConcrete> options)
-        {
-            _options = options;
-            options.OnChange((options, name) => _onChange?.Invoke(options, name));
-        }
-
-        internal event Action<TInterface, string>? _onChange;
-
-        public TInterface Get(string name)
-        {
-            return _options.Get(name);
-        }
-
-        public IDisposable OnChange(Action<TInterface, string> listener)
-        {
-            var disposable = new ChangeTrackerDisposable(this, listener);
-            
-            _onChange += disposable.OnChange;
-            
-            return disposable;
-        }
-
-        public TInterface CurrentValue => _options.CurrentValue;
-
-        internal sealed class ChangeTrackerDisposable : IDisposable
-        {
-            private readonly Action<TInterface, string> _listener;
-            private readonly MonitorRedirect<TConcrete, TInterface> _monitor;
-
-            public ChangeTrackerDisposable(MonitorRedirect<TConcrete, TInterface> monitor,
-                Action<TInterface, string> listener)
-            {
-                _listener = listener;
-                _monitor = monitor;
-            }
-
-            public void Dispose() => _monitor._onChange -= OnChange;
-
-            public void OnChange(TInterface options, string name) => _listener.Invoke(options, name);
-        }
-    }
-
-    internal class SnapshotRedirect<TConcrete, TInterface> : IOptionsSnapshot<TInterface>
-        where TConcrete : class, TInterface where TInterface : class
-    {
-        private readonly IOptionsSnapshot<TConcrete> _options;
-
-        public SnapshotRedirect(IOptionsSnapshot<TConcrete> options)
-        {
-            _options = options;
-        }
-
-        public TInterface Get(string name)
-        {
-            return _options.Get(name);
-        }
-
-        public TInterface Value => _options.Value;
     }
 }

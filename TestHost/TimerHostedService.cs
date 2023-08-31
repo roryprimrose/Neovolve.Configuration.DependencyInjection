@@ -11,12 +11,10 @@
             _delay = delay;
         }
 
-        // Could also be a async method, that can be awaited in ExecuteAsync above
         protected abstract Task DoWork(CancellationToken cancellationToken);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // When the timer should have no due-time, then do the work once now.
             await DoWork(stoppingToken).ConfigureAwait(false);
 
             using PeriodicTimer timer = new(_delay);

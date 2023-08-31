@@ -9,6 +9,11 @@
         public MonitorConcreteService(IOptionsMonitor<FirstConfig> config)
         {
             _config = config;
+
+            //_config.OnChange(x =>
+            //{
+            //    Console.WriteLine("First value changed from IOptionsMonitor<FirstConfig>");
+            //});
         }
 
         protected override Task DoWork(CancellationToken cancellationToken)

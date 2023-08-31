@@ -2,9 +2,9 @@
 
 internal class RootInterfaceService : ConsoleUpdateService
 {
-    private readonly Config _config;
+    private readonly IConfig _config;
 
-    public RootInterfaceService(Config config)
+    public RootInterfaceService(IConfig config)
     {
         _config = config;
     }

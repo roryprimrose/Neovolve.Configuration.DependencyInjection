@@ -11,8 +11,6 @@
         {
             var builder = Host.CreateDefaultBuilder()
                 .ConfigureWith<Config>()
-                .ConfigureLogging(
-                    builder => { builder.AddConsole(); })
                 .ConfigureServices(
                     services =>
                     {

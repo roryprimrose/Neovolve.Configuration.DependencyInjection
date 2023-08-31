@@ -9,6 +9,11 @@ internal class MonitorInterfaceService : ConsoleUpdateService
     public MonitorInterfaceService(IOptionsMonitor<IFirstConfig> config)
     {
         _config = config;
+
+        //_config.OnChange(x =>
+        //{
+        //    Console.WriteLine("First value changed from IOptionsMonitor<IFirstConfig>");
+        //});
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
