@@ -11,7 +11,7 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
     public MonitorProxy(IOptionsMonitor<TConcrete> options)
     {
         _options = options;
-        options.OnChange((options, name) => _onChange?.Invoke(options, name));
+        options.OnChange((value, name) => _onChange?.Invoke(value, name));
     }
 
     internal event Action<TInterface, string>? _onChange;

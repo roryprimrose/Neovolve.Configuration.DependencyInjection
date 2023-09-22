@@ -31,9 +31,9 @@ public abstract class ConsoleUpdateService : TimerHostedService
         {
             var position = Console.GetCursorPosition();
 
-            //Console.SetCursorPosition(0, _line);
-            //Console.WriteLine(output);
-            //Console.SetCursorPosition(position.Left, position.Top);
+            Console.SetCursorPosition(0, _line);
+            Console.WriteLine(output);
+            Console.SetCursorPosition(position.Left, position.Top);
         }
 
         return Task.CompletedTask;

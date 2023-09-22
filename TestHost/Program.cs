@@ -2,7 +2,6 @@
 {
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
-    using Microsoft.Extensions.Logging;
     using Neovolve.Configuration.DependencyInjection;
 
     internal class Program
@@ -16,10 +15,10 @@
                     {
                         services.AddHostedService<RootConcreteService>();
                         services.AddHostedService<RootInterfaceService>();
-                        services.AddHostedService<MonitorConcreteService>();
-                        services.AddHostedService<MonitorInterfaceService>();
-                        services.AddHostedService<SnapshotConcreteService>();
-                        services.AddHostedService<SnapshotInterfaceService>();
+                        //services.AddHostedService<MonitorConcreteService>();
+                        //services.AddHostedService<MonitorInterfaceService>();
+                        //services.AddHostedService<SnapshotConcreteService>();
+                        //services.AddHostedService<SnapshotInterfaceService>();
                         services.AddHostedService<ConcreteService>();
                         services.AddHostedService<InterfaceService>();
                     });

@@ -28,11 +28,10 @@
             throw new InvalidOperationException(
                 $"Unable to find {_extensionType}.{nameof(RegisterConfigInterfaceType)}<TConcrete, TInterface> method");
 
-        private static readonly ConcurrentDictionary<Type, ILogger> _loggerCache = new();
+        private static readonly ConcurrentDictionary<Type, ILogger?> _loggerCache = new();
 
         private static readonly Dictionary<Type, List<PropertyInfo>> _propertyCache = new();
-
-
+        
         public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder) where T : class
         {
             return ConfigureWith<T>(builder, true);
@@ -45,10 +44,12 @@
             return builder.RegisterConfigurationRoot<T>()
                 .ConfigureServices((context, services) =>
                 {
+                    var configuration = context.Configuration;
+
                     var owningType = typeof(T);
                     var sectionPrefix = string.Empty;
 
-                    RegisterChildTypes(context, services, owningType, sectionPrefix, reloadInjectedTypes);
+                    RegisterChildTypes(configuration, services, owningType, sectionPrefix, reloadInjectedTypes);
                 });
         }
 
@@ -119,7 +120,7 @@
 
         private static ILogger? GetLogger<T>(IServiceProvider serviceProvider)
         {
-            return _loggerCache.GetOrAdd(typeof(T), x =>
+            return _loggerCache.GetOrAdd(typeof(T), _ =>
             {
                 var factory = serviceProvider.GetService<ILoggerFactory>();
                 var logger = factory?.CreateLogger<T>();
@@ -164,7 +165,7 @@
             Message = "Failed to copy hot reload config value for {targetType}.{property}")]
         static partial void LogConfigCopyFail(ILogger logger, Exception ex, Type targetType, string property);
 
-        private static void RegisterChildTypes(HostBuilderContext context, IServiceCollection services, Type owningType,
+        private static void RegisterChildTypes(IConfiguration configuration, IServiceCollection services, Type owningType,
             string sectionPrefix, bool reloadInjectedTypes)
         {
             // Get the reference to the RegisterConfigType method
@@ -195,7 +196,7 @@
                 }
 
                 var sectionPath = sectionPrefix + propertyInfo.Name;
-                var section = context.Configuration.GetSection(sectionPath);
+                var section = configuration.GetSection(sectionPath);
 
                 var registerConfigType = _registerConfigTypeMember.MakeGenericMethod(configType);
 
@@ -213,7 +214,7 @@
                     registerConfigInterfaceType.Invoke(null, new object[] { services });
                 }
 
-                RegisterChildTypes(context, services, propertyInfo.PropertyType, sectionPath, reloadInjectedTypes);
+                RegisterChildTypes(configuration, services, propertyInfo.PropertyType, sectionPath, reloadInjectedTypes);
             }
         }
 
@@ -240,13 +241,11 @@
             });
 
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
-            services.AddSingleton(x =>
+            services.AddSingleton<TInterface>(x =>
             {
-                var options = x.GetRequiredService<IOptionsMonitor<TConcrete>>();
+                var options = x.GetRequiredService<TConcrete>();
 
-                var injectedValue = options.CurrentValue;
-
-                return (TInterface)injectedValue;
+                return options;
             });
 
             return services;
@@ -282,24 +281,29 @@
 
         private static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder) where T : class
         {
+            return builder.ConfigureServices((context, services) => RegisterConfigurationRoot<T>(services, context.Configuration));
+        }
+
+        private static void RegisterConfigurationRoot<T>(IServiceCollection services, IConfiguration configuration) where T : class
+        {
             // This registers static values
-            builder.ConfigureServices((context, services) =>
+            services.AddOptions<T>();
+
+            var value = configuration.Get<T>();
+
+            if (value == null)
             {
-                services.AddOptions<T>();
+                throw new InvalidOperationException($"Failed to bind application configuration to {typeof(T)}.");
+            }
 
-                var value = context.Configuration.Get<T>();
+            services.AddSingleton(value);
 
-                services.AddSingleton(value);
+            var interfaces = typeof(T).GetInterfaces();
 
-                var interfaces = typeof(T).GetInterfaces();
-
-                foreach (var interfaceType in interfaces)
-                {
-                    services.AddSingleton(interfaceType, value);
-                }
-            });
-
-            return builder;
+            foreach (var interfaceType in interfaces)
+            {
+                services.AddSingleton(interfaceType, value);
+            }
         }
     }
 }
