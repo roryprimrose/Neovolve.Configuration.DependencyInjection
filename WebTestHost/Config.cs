@@ -2,18 +2,15 @@
 
 public interface IConfig
 {
-    FirstConfig First { get; set; }
-
-    string RootValue { get; set; }
+    string RootValue { get; }
 }
 
 public class Config : IConfig
 {
-    public FirstConfig First
+    public IFirstConfig First
     {
         get;
-        set;
-    }
+    } = new FirstConfig();
 
     public string RootValue { get; set; }
 }
@@ -25,11 +22,10 @@ public interface IFirstConfig
 
 public class FirstConfig : IFirstConfig
 {
-    public SecondConfig Second
+    public ISecondConfig Second
     {
         get;
-        set;
-    }
+    } = new SecondConfig();
 
     public string FirstValue { get; set; }
 }
@@ -41,26 +37,15 @@ public interface ISecondConfig
 
 public class SecondConfig : ISecondConfig
 {
-    private string _secondValue;
-
-    public ThirdConfig Third
+    public IThirdConfig Third
     {
         get;
-        set;
-    }
+    } = new ThirdConfig();
 
     public string SecondValue
     {
-        get => _secondValue;
-        set
-        {
-            //if (_secondValue != null)
-            //{
-            //    throw new InvalidOperationException("haha");
-            //}
-
-            _secondValue = value;
-        }
+        get;
+        set;
     }
 }
 

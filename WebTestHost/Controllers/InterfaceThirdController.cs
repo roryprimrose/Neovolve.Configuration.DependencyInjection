@@ -1,19 +1,19 @@
-using Microsoft.AspNetCore.Mvc;
-
 namespace WebTestHost.Controllers
 {
+    using Microsoft.AspNetCore.Mvc;
+
     [ApiController]
     [Route("[controller]")]
-    public class ThirdConfigController : ControllerBase
+    public class InterfaceThirdController : ControllerBase
     {
         private readonly IThirdConfig _thirdConfig;
 
-        public ThirdConfigController(IThirdConfig thirdConfig)
+        public InterfaceThirdController(IThirdConfig thirdConfig)
         {
             _thirdConfig = thirdConfig;
         }
 
-        [HttpGet(Name = "GetThirdConfig")]
+        [HttpGet]
         public IThirdConfig Get()
         {
             return _thirdConfig;

@@ -2,20 +2,18 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace WebTestHost.Controllers
 {
-    using Microsoft.Extensions.Options;
-
     [ApiController]
     [Route("[controller]")]
-    public class SecondConfigController : ControllerBase
+    public class ConcreteSecondController : ControllerBase
     {
         private readonly ISecondConfig _secondConfig;
 
-        public SecondConfigController(ISecondConfig secondConfig)
+        public ConcreteSecondController(SecondConfig secondConfig)
         {
             _secondConfig = secondConfig;
         }
 
-        [HttpGet(Name = "GetSecondConfig")]
+        [HttpGet]
         public ISecondConfig Get()
         {
             return _secondConfig;

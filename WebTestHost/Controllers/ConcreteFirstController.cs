@@ -4,16 +4,16 @@ namespace WebTestHost.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class FirstConfigController : ControllerBase
+    public class ConcreteFirstController : ControllerBase
     {
         private readonly IFirstConfig _firstConfig;
 
-        public FirstConfigController(IFirstConfig firstConfig)
+        public ConcreteFirstController(FirstConfig firstConfig)
         {
             _firstConfig = firstConfig;
         }
 
-        [HttpGet(Name = "GetFirstConfig")]
+        [HttpGet]
         public IFirstConfig Get()
         {
             return _firstConfig;

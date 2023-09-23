@@ -4,17 +4,17 @@ namespace WebTestHost.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ConfigController : ControllerBase
+    public class ConcreteConfigController : ControllerBase
     {
-        private readonly Config _config;
+        private readonly IConfig _config;
 
-        public ConfigController(Config config)
+        public ConcreteConfigController(Config config)
         {
             _config = config;
         }
 
-        [HttpGet(Name = "GetConfig")]
-        public Config Get()
+        [HttpGet]
+        public IConfig Get()
         {
             return _config;
         }
