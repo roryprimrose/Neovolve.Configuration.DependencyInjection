@@ -1,31 +1,31 @@
-﻿namespace TestHost
+﻿namespace TestHost;
+
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Neovolve.Configuration.DependencyInjection;
+
+internal class Program
 {
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.Hosting;
-    using Neovolve.Configuration.DependencyInjection;
-
-    internal class Program
+    private static async Task Main(string[] args)
     {
-        private static async Task Main(string[] args)
-        {
-            var builder = Host.CreateDefaultBuilder()
-                .ConfigureWith<Config>()
-                .ConfigureServices(
-                    services =>
-                    {
-                        services.AddHostedService<RootConcreteService>();
-                        services.AddHostedService<RootInterfaceService>();
-                        //services.AddHostedService<MonitorConcreteService>();
-                        //services.AddHostedService<MonitorInterfaceService>();
-                        //services.AddHostedService<SnapshotConcreteService>();
-                        //services.AddHostedService<SnapshotInterfaceService>();
-                        services.AddHostedService<ConcreteService>();
-                        services.AddHostedService<InterfaceService>();
-                    });
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureWith<Config>()
+            .ConfigureServices(
+                services =>
+                {
+                    services.AddHostedService<RootConcreteService>();
+                    services.AddHostedService<RootInterfaceService>();
 
-            await builder.RunConsoleAsync().ConfigureAwait(false);
+                    //services.AddHostedService<MonitorConcreteService>();
+                    //services.AddHostedService<MonitorInterfaceService>();
+                    //services.AddHostedService<SnapshotConcreteService>();
+                    //services.AddHostedService<SnapshotInterfaceService>();
+                    services.AddHostedService<ConcreteService>();
+                    services.AddHostedService<InterfaceService>();
+                });
 
-            Console.WriteLine("Completed");
-        }
+        await builder.RunConsoleAsync().ConfigureAwait(false);
+
+        Console.WriteLine("Completed");
     }
 }

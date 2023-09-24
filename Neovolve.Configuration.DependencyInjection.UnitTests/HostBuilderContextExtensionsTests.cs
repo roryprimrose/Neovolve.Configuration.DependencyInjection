@@ -1,15 +1,14 @@
-namespace Neovolve.Configuration.DependencyInjection.UnitTests
+namespace Neovolve.Configuration.DependencyInjection.UnitTests;
+
+using FluentAssertions;
+
+public class HostBuilderContextExtensionsTests
 {
-    using FluentAssertions;
-
-    public class HostBuilderContextExtensionsTests
+    [Fact]
+    public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
-        [Fact]
-        public void ConfigureWithThrowsExceptionWithNullBuilder()
-        {
-            Action action = () => HostBuilderContextExtensions.ConfigureWith<Config>(null!);
+        Action action = () => HostBuilderContextExtensions.ConfigureWith<Config>(null!);
 
-            action.Should().Throw<ArgumentNullException>();
-        }
+        action.Should().Throw<ArgumentNullException>();
     }
 }

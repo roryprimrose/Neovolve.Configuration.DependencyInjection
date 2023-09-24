@@ -1,39 +1,38 @@
-﻿namespace TestHost
+﻿namespace TestHost;
+
+using Microsoft.Extensions.Hosting;
+
+public abstract class TimerHostedService : BackgroundService
 {
-    using Microsoft.Extensions.Hosting;
+    private readonly TimeSpan _delay;
 
-    public abstract class TimerHostedService : BackgroundService
+    protected TimerHostedService(TimeSpan delay)
     {
-        private readonly TimeSpan _delay;
+        _delay = delay;
+    }
 
-        protected TimerHostedService(TimeSpan delay)
+    protected abstract Task DoWork(CancellationToken cancellationToken);
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await DoWork(stoppingToken).ConfigureAwait(false);
+
+        using PeriodicTimer timer = new(_delay);
+
+        try
         {
-            _delay = delay;
+            while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
+            {
+                await DoWork(stoppingToken).ConfigureAwait(false);
+            }
         }
-
-        protected abstract Task DoWork(CancellationToken cancellationToken);
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        catch (OperationCanceledException)
         {
-            await DoWork(stoppingToken).ConfigureAwait(false);
-
-            using PeriodicTimer timer = new(_delay);
-
-            try
-            {
-                while (await timer.WaitForNextTickAsync(stoppingToken).ConfigureAwait(false))
-                {
-                    await DoWork(stoppingToken).ConfigureAwait(false);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine(GetType() + " has been cancelled");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
-            }
+            Console.WriteLine(GetType() + " has been cancelled");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
         }
     }
 }

@@ -9,11 +9,7 @@ internal interface IConfig
 
 internal class Config : IConfig
 {
-    public FirstConfig First
-    {
-        get;
-        set;
-    }
+    public FirstConfig First { get; set; }
 
     public string RootValue { get; set; }
 }
@@ -25,13 +21,9 @@ internal interface IFirstConfig
 
 internal class FirstConfig : IFirstConfig
 {
-    public SecondConfig Second
-    {
-        get;
-        set;
-    }
-
     public string FirstValue { get; set; }
+
+    public SecondConfig Second { get; set; }
 }
 
 internal interface ISecondConfig
@@ -41,27 +33,9 @@ internal interface ISecondConfig
 
 internal class SecondConfig : ISecondConfig
 {
-    private string _secondValue;
+    public string SecondValue { get; set; }
 
-    public ThirdConfig Third
-    {
-        get;
-        set;
-    }
-
-    public string SecondValue
-    {
-        get => _secondValue;
-        set
-        {
-            //if (_secondValue != null)
-            //{
-            //    throw new InvalidOperationException("haha");
-            //}
-
-            _secondValue = value;
-        }
-    }
+    public ThirdConfig Third { get; set; }
 }
 
 internal interface IThirdConfig

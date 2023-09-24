@@ -7,10 +7,7 @@ public interface IConfig
 
 public class Config : IConfig
 {
-    public IFirstConfig First
-    {
-        get;
-    } = new FirstConfig();
+    public FirstConfig First { get; } = new();
 
     public string RootValue { get; set; }
 }
@@ -22,12 +19,9 @@ public interface IFirstConfig
 
 public class FirstConfig : IFirstConfig
 {
-    public ISecondConfig Second
-    {
-        get;
-    } = new SecondConfig();
-
     public string FirstValue { get; set; }
+
+    public SecondConfig Second { get; } = new();
 }
 
 public interface ISecondConfig
@@ -37,16 +31,9 @@ public interface ISecondConfig
 
 public class SecondConfig : ISecondConfig
 {
-    public IThirdConfig Third
-    {
-        get;
-    } = new ThirdConfig();
+    public string SecondValue { get; set; }
 
-    public string SecondValue
-    {
-        get;
-        set;
-    }
+    public ThirdConfig Third { get; } = new();
 }
 
 public interface IThirdConfig
