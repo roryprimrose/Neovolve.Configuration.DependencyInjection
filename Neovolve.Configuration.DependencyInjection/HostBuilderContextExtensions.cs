@@ -41,14 +41,8 @@ public static partial class HostBuilderContextExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        return builder.ConfigureServices((context, services) =>
-        {
-            services.AddOptions<T>();
-
-            // Register the configuration types starting from the root type and recursing through all properties
-            // using the path of property names as the mapping to configuration sections
-            RegisterSection(services, context.Configuration, typeof(T), Options.DefaultName, reloadInjectedTypes);
-        });
+        return builder.ConfigureServices((_, services) => services.AddOptions<T>())
+            .RegisterConfigurationRoot<T>(reloadInjectedTypes);
     }
 
     private static void CopyValues<T>(IServiceProvider serviceProvider, T injectedConfig, T updatedConfig)
@@ -246,7 +240,7 @@ public static partial class HostBuilderContextExtensions
         });
 
         // Add registration to redirect IOptions<TConcrete> to IOptions<TInterface>
-        services.AddTransient<IOptions<TInterface>>(x =>
+        services.AddSingleton<IOptions<TInterface>>(x =>
         {
             var concreteOptions = x.GetRequiredService<IOptions<TConcrete>>();
 
@@ -317,5 +311,33 @@ public static partial class HostBuilderContextExtensions
 
         RegisterChildTypes(configuration, services, configType, sectionPath,
             reloadInjectedTypes);
+    }
+
+    private static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
+    {
+        // Register the configuration types starting from the root type and recursing through all properties
+        // using the path of property names as the mapping to configuration sections
+
+        // This registers static values
+        builder.ConfigureServices((context, services) =>
+        {
+            var value = context.Configuration.Get<T>()!;
+
+            services.AddSingleton(value);
+
+            var configType = typeof(T);
+            var interfaces = configType.GetInterfaces();
+
+            foreach (var interfaceType in interfaces)
+            {
+                services.AddSingleton(interfaceType, value);
+            }
+            
+            RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName,
+                reloadInjectedTypes);
+
+        });
+
+        return builder;
     }
 }
