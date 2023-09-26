@@ -7,6 +7,7 @@
 		<!--<TreatWarningsAsErrors>True</TreatWarningsAsErrors>-->
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
 
 		<Title>Configuration binding dependency injection support with hot reload</Title>
 		<Authors>Rory Primrose</Authors>

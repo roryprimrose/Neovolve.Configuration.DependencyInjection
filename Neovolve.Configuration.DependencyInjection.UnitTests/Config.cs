@@ -9,49 +9,35 @@ internal interface IConfig
 
 internal class Config : IConfig
 {
-    public FirstConfig First
-    {
-        get;
-        set;
-    }
+    public FirstConfig First { get; set; }
 
     public string RootValue { get; set; }
 }
 
 internal interface IFirstConfig
 {
-    SecondConfig Second { get; }
-
     string FirstValue { get; }
+    SecondConfig Second { get; }
 }
 
 internal class FirstConfig : IFirstConfig
 {
-    public SecondConfig Second
-    {
-        get;
-        set;
-    }
-
     public string FirstValue { get; set; }
+
+    public SecondConfig Second { get; set; }
 }
 
 internal interface ISecondConfig
 {
-    ThirdConfig Third { get; }
-
     string SecondValue { get; }
+    ThirdConfig Third { get; }
 }
 
 internal class SecondConfig : ISecondConfig
 {
-    public ThirdConfig Third
-    {
-        get;
-        set;
-    }
-
     public string SecondValue { get; set; }
+
+    public ThirdConfig Third { get; set; }
 }
 
 internal interface IThirdConfig
