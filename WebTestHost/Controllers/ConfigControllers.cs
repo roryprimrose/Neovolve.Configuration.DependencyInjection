@@ -1,7 +1,6 @@
 namespace WebTestHost.Controllers;
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 [ApiController]
 [Route("[controller]")]

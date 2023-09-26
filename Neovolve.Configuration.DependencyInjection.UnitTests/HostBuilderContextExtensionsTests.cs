@@ -4,16 +4,37 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using ModelBuilder;
 
 public class HostBuilderContextExtensionsTests
 {
-    [Fact]
-    public void ConfigureWithThrowsExceptionWithNullBuilder()
+    public static IEnumerable<object[]> ConfigTypesDataSet(bool configureReload)
     {
-        Action action = () => HostBuilderContextExtensions.ConfigureWith<Config>(null!);
-
-        action.Should().Throw<ArgumentNullException>();
+        yield return new object[] { typeof(Config), configureReload };
+        yield return new object[] { typeof(IConfig), configureReload };
+        yield return new object[] { typeof(FirstConfig), configureReload };
+        yield return new object[] { typeof(IOptions<FirstConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<FirstConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<FirstConfig>), configureReload };
+        yield return new object[] { typeof(IFirstConfig), configureReload };
+        yield return new object[] { typeof(IOptions<IFirstConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<IFirstConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<IFirstConfig>), configureReload };
+        yield return new object[] { typeof(SecondConfig), configureReload };
+        yield return new object[] { typeof(IOptions<SecondConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<SecondConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<SecondConfig>), configureReload };
+        yield return new object[] { typeof(ISecondConfig), configureReload };
+        yield return new object[] { typeof(IOptions<ISecondConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<ISecondConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<ISecondConfig>), configureReload };
+        yield return new object[] { typeof(ThirdConfig), configureReload };
+        yield return new object[] { typeof(IOptions<ThirdConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<ThirdConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<ThirdConfig>), configureReload };
+        yield return new object[] { typeof(IThirdConfig), configureReload };
+        yield return new object[] { typeof(IOptions<IThirdConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsSnapshot<IThirdConfig>), configureReload };
+        yield return new object[] { typeof(IOptionsMonitor<IThirdConfig>), configureReload };
     }
 
     [Theory]
@@ -45,33 +66,11 @@ public class HostBuilderContextExtensionsTests
         actual.Should().BeAssignableTo(expected);
     }
 
-    public static IEnumerable<object[]> ConfigTypesDataSet(bool configureReload)
+    [Fact]
+    public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
-        yield return new object[]{typeof(Config), configureReload};
-        yield return new object[]{typeof(IConfig), configureReload};
-        yield return new object[]{typeof(FirstConfig), configureReload};
-        yield return new object[]{typeof(IOptions<FirstConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<FirstConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<FirstConfig>), configureReload};
-        yield return new object[]{typeof(IFirstConfig), configureReload};
-        yield return new object[]{typeof(IOptions<IFirstConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<IFirstConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<IFirstConfig>), configureReload};
-        yield return new object[]{typeof(SecondConfig), configureReload};
-        yield return new object[]{typeof(IOptions<SecondConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<SecondConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<SecondConfig>), configureReload};
-        yield return new object[]{typeof(ISecondConfig), configureReload};
-        yield return new object[]{typeof(IOptions<ISecondConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<ISecondConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<ISecondConfig>), configureReload};
-        yield return new object[]{typeof(ThirdConfig), configureReload};
-        yield return new object[]{typeof(IOptions<ThirdConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<ThirdConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<ThirdConfig>), configureReload};
-        yield return new object[]{typeof(IThirdConfig), configureReload};
-        yield return new object[]{typeof(IOptions<IThirdConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsSnapshot<IThirdConfig>), configureReload};
-        yield return new object[]{typeof(IOptionsMonitor<IThirdConfig>), configureReload};
+        Action action = () => HostBuilderContextExtensions.ConfigureWith<Config>(null!);
+
+        action.Should().Throw<ArgumentNullException>();
     }
 }

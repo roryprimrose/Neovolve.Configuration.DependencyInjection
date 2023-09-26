@@ -11,6 +11,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+/// <summary>
+///     The <see cref="HostBuilderContextExtensions" /> class provides methods for configuring dependency injection of
+///     strong typed configuration types with support for hot reloading configuration changes.
+/// </summary>
 public static partial class HostBuilderContextExtensions
 {
     private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.CopyValues";
@@ -32,11 +36,44 @@ public static partial class HostBuilderContextExtensions
 
     private static readonly Dictionary<Type, List<PropertyInfo>> _propertyCache = new();
 
+    /// <summary>
+    ///     The <see cref="ConfigureWith{T}(IHostBuilder, bool)" /> method is used to configure the host builder with
+    ///     configuration binding of type
+    ///     <typeparamref name="T" />
+    ///     and all its child types with hot reloading configuration changes onto injected raw configuration types.
+    /// </summary>
+    /// <typeparam name="T">The type of configuration to register.</typeparam>
+    /// <param name="builder">The host builder to configure.</param>
+    /// <returns>The configured host builder.</returns>
+    /// <exception cref="ArgumentNullException">The <paramref name="builder" /> parameter is <c>null</c>.</exception>
+    /// <remarks>
+    ///     This method adds options of type <typeparamref name="T" /> to the service collection and registers the
+    ///     configuration root of type <typeparamref name="T" /> and all child types found.
+    ///     The injected raw types defined in the configuration type will support hot reloading of updated configuration.
+    /// </remarks>
     public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder) where T : class
     {
         return ConfigureWith<T>(builder, true);
     }
 
+    /// <summary>
+    ///     The <see cref="ConfigureWith{T}(IHostBuilder, bool)" /> method is used to configure the host builder with
+    ///     configuration binding of type
+    ///     <typeparamref name="T" />
+    ///     and all its child types.
+    /// </summary>
+    /// <typeparam name="T">The type of configuration to register.</typeparam>
+    /// <param name="builder">The host builder to configure.</param>
+    /// <param name="reloadInjectedTypes"><c>true</c> if hot reloading raw types is enabled; otherwise <c>false</c>.</param>
+    /// <returns>The configured host builder.</returns>
+    /// <exception cref="ArgumentNullException">The <paramref name="builder" /> parameter is <c>null</c>.</exception>
+    /// <remarks>
+    ///     This method adds options of type <typeparamref name="T" /> to the service collection and registers the
+    ///     configuration root of type <typeparamref name="T" />
+    ///     and all child types found.
+    ///     If <paramref name="reloadInjectedTypes" /> is <c>true</c>, the injected raw types defined in the configuration type
+    ///     will support hot reloading of updated configuration.
+    /// </remarks>
     public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
@@ -288,6 +325,34 @@ public static partial class HostBuilderContextExtensions
         return services;
     }
 
+    private static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder, bool reloadInjectedTypes)
+        where T : class
+    {
+        // Register the configuration types starting from the root type and recursing through all properties
+        // using the path of property names as the mapping to configuration sections
+
+        // This registers static values
+        builder.ConfigureServices((context, services) =>
+        {
+            var value = context.Configuration.Get<T>()!;
+
+            services.AddSingleton(value);
+
+            var configType = typeof(T);
+            var interfaces = configType.GetInterfaces();
+
+            foreach (var interfaceType in interfaces)
+            {
+                services.AddSingleton(interfaceType, value);
+            }
+
+            RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName,
+                reloadInjectedTypes);
+        });
+
+        return builder;
+    }
+
     private static void RegisterSection(IServiceCollection services, IConfiguration configuration, Type configType,
         string sectionPath, bool reloadInjectedTypes)
     {
@@ -311,33 +376,5 @@ public static partial class HostBuilderContextExtensions
 
         RegisterChildTypes(configuration, services, configType, sectionPath,
             reloadInjectedTypes);
-    }
-
-    private static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
-    {
-        // Register the configuration types starting from the root type and recursing through all properties
-        // using the path of property names as the mapping to configuration sections
-
-        // This registers static values
-        builder.ConfigureServices((context, services) =>
-        {
-            var value = context.Configuration.Get<T>()!;
-
-            services.AddSingleton(value);
-
-            var configType = typeof(T);
-            var interfaces = configType.GetInterfaces();
-
-            foreach (var interfaceType in interfaces)
-            {
-                services.AddSingleton(interfaceType, value);
-            }
-            
-            RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName,
-                reloadInjectedTypes);
-
-        });
-
-        return builder;
     }
 }
