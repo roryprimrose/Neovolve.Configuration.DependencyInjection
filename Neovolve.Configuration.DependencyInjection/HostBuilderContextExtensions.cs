@@ -1,4 +1,6 @@
-﻿namespace Neovolve.Configuration.DependencyInjection;
+﻿// We want the extension methods to be exposed when hosting is available in the calling application
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.Hosting;
 
 using System;
 using System.Collections.Concurrent;
@@ -7,9 +9,9 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
 ///     The <see cref="HostBuilderContextExtensions" /> class provides methods for configuring dependency injection of

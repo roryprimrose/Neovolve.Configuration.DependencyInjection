@@ -1,7 +1,5 @@
 namespace WebTestHost;
 
-using Neovolve.Configuration.DependencyInjection;
-
 public class Program
 {
     public static void Main(string[] args)
