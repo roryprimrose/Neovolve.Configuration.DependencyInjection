@@ -49,6 +49,11 @@ public interface ISecondConfig
     string SecondValue { get; }
 }
 
+public class SecondConfig : ISecondConfig
+{
+    string SecondValue { get; set; }
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

@@ -7,7 +7,7 @@ public abstract class ConsoleUpdateService : TimerHostedService
     private readonly int _line;
 
     protected ConsoleUpdateService()
-        : this(TimeSpan.FromMilliseconds(500))
+        : this(TimeSpan.FromMilliseconds(3000))
     {
     }
 
@@ -25,15 +25,11 @@ public abstract class ConsoleUpdateService : TimerHostedService
 
     protected Task WriteValue(string text)
     {
-        var output = GetType() + ": " + text + new string(' ', 50);
+        var output = GetType() + ": " + text;
 
         lock (_syncLock)
         {
-            var position = Console.GetCursorPosition();
-
-            Console.SetCursorPosition(0, _line);
             Console.WriteLine(output);
-            Console.SetCursorPosition(position.Left, position.Top);
         }
 
         return Task.CompletedTask;

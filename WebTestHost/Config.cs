@@ -39,9 +39,15 @@ public class SecondConfig : ISecondConfig
 public interface IThirdConfig
 {
     string ThirdValue { get; }
+
+    TimeSpan Timeout { get; }
 }
 
 public class ThirdConfig : IThirdConfig
 {
+    public int TimeoutInSeconds { get; set; } = 123;
+
+    public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
+
     public string ThirdValue { get; set; }
 }

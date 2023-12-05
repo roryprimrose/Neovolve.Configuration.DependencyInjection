@@ -23,7 +23,7 @@ internal class FirstConfig : IFirstConfig
 {
     public string FirstValue { get; set; }
 
-    public SecondConfig Second { get; set; }
+    public SecondConfig Second { get; set; } = new SecondConfig();
 }
 
 internal interface ISecondConfig
@@ -35,15 +35,21 @@ internal class SecondConfig : ISecondConfig
 {
     public string SecondValue { get; set; }
 
-    public ThirdConfig Third { get; set; }
+    public ThirdConfig Third { get; set; } = new();
 }
 
 internal interface IThirdConfig
 {
     string ThirdValue { get; }
+
+    TimeSpan Timeout { get; }
 }
 
 internal class ThirdConfig : IThirdConfig
 {
+    public int TimeoutInSeconds { get; set; } = 123;
+
+    public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
+
     public string ThirdValue { get; set; }
 }

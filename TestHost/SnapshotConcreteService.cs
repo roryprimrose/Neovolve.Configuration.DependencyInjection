@@ -13,6 +13,6 @@ internal class SnapshotConcreteService : ConsoleUpdateService
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        return WriteValue(_config.Value.ThirdValue);
+        return WriteValue(_config.Value.ThirdValue + " with timeout " + _config.Value.Timeout);
     }
 }
