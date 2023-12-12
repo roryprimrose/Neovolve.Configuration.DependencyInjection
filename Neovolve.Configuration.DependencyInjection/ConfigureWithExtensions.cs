@@ -87,7 +87,7 @@ public static partial class ConfigureWithExtensions
     private static void CopyValues<T>(IServiceProvider serviceProvider, T injectedConfig, T updatedConfig)
     {
         var targetType = typeof(T);
-        var properties = GetProperties(targetType, true);
+        var properties = PropertyCache.GetBindableProperties(targetType, true);
         var logger = GetLogger<T>(serviceProvider);
 
         // The IOptionsMonitor<T>.OnChange event gets triggered twice on a change notification for file based configuration
@@ -171,32 +171,10 @@ public static partial class ConfigureWithExtensions
         });
     }
 
-    private static List<PropertyInfo> GetProperties(Type targetType, bool reloadInjectedTypes)
-    {
-        if (_propertyCache.TryGetValue(targetType, out var cachedProperties))
-        {
-            return cachedProperties;
-        }
-
-        // Either we are not auto-reloading injected types or the properties do not exist in cache yet
-        var properties = (from x in targetType.GetProperties()
-            where x.CanRead && x.GetMethod.IsPublic
-            select x).ToList();
-
-        // We are only going to cache the properties of the target type if auto-reloading injected types is enabled
-        // because the property values will continue to be used beyond the initial bootstrapping of the application
-        if (reloadInjectedTypes)
-        {
-            _propertyCache[targetType] = properties;
-        }
-
-        return properties;
-    }
-
     private static void LogReadOnlyProperties<T>(IServiceProvider serviceProvider, bool reloadInjectedTypes)
         where T : class
     {
-        var properties = GetProperties(typeof(T), reloadInjectedTypes);
+        var properties = PropertyCache.GetBindableProperties(typeof(T), reloadInjectedTypes);
         Lazy<ILogger?> logger = new(() => GetLogger<T>(serviceProvider));
 
         foreach (var property in properties)
@@ -231,7 +209,7 @@ public static partial class ConfigureWithExtensions
             sectionPrefix += ":";
         }
 
-        var properties = GetProperties(owningType, reloadInjectedTypes);
+        var properties = PropertyCache.GetBindableProperties(owningType, reloadInjectedTypes);
 
         foreach (var propertyInfo in properties)
         {
