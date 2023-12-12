@@ -14,13 +14,13 @@ using Microsoft.Extensions.Options;
 using Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
-///     The <see cref="HostBuilderContextExtensions" /> class provides methods for configuring dependency injection of
+///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
 ///     strong typed configuration types with support for hot reloading configuration changes.
 /// </summary>
-public static partial class HostBuilderContextExtensions
+public static partial class ConfigureWithExtensions
 {
     private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.CopyValues";
-    private static readonly Type _extensionType = typeof(HostBuilderContextExtensions);
+    private static readonly Type _extensionType = typeof(ConfigureWithExtensions);
 
     private static readonly MethodInfo _registerConfigTypeMember =
         _extensionType.GetMethod(nameof(RegisterConfigType), BindingFlags.Static | BindingFlags.NonPublic, null,

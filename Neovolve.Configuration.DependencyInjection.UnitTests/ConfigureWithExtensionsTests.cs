@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-public class HostBuilderContextExtensionsTests
+public class ConfigureWithExtensionsTests
 {
     public static IEnumerable<object[]> ConfigTypesDataSet(bool configureReload)
     {
@@ -69,7 +69,7 @@ public class HostBuilderContextExtensionsTests
     [Fact]
     public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
-        Action action = () => HostBuilderContextExtensions.ConfigureWith<Config>(null!);
+        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!);
 
         action.Should().Throw<ArgumentNullException>();
     }

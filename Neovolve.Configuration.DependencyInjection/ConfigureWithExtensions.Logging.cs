@@ -5,7 +5,7 @@ namespace Microsoft.Extensions.Hosting;
 using System;
 using Microsoft.Extensions.Logging;
 
-public static partial class HostBuilderContextExtensions
+public static partial class ConfigureWithExtensions
 {
     [LoggerMessage(EventId = 5000, EventName = CopyValuesEventName, Level = LogLevel.Information,
         Message = "Configuration updated on {targetType}")]
