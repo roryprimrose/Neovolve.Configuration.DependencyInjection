@@ -14,14 +14,14 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
         options.OnChange((value, name) => _onChange?.Invoke(value, name));
     }
 
-    internal event Action<TInterface, string>? _onChange;
+    internal event Action<TInterface, string?>? _onChange;
 
-    public TInterface Get(string name)
+    public TInterface Get(string? name)
     {
         return _options.Get(name);
     }
 
-    public IDisposable OnChange(Action<TInterface, string> listener)
+    public IDisposable OnChange(Action<TInterface, string?> listener)
     {
         var disposable = new ConfigurationChangeTracker(this, listener);
 
@@ -32,13 +32,13 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
 
     public TInterface CurrentValue => _options.CurrentValue;
 
-    internal sealed class ConfigurationChangeTracker : IDisposable
+    private sealed class ConfigurationChangeTracker : IDisposable
     {
-        private readonly Action<TInterface, string> _listener;
+        private readonly Action<TInterface, string?> _listener;
         private readonly MonitorProxy<TConcrete, TInterface> _monitor;
 
         public ConfigurationChangeTracker(MonitorProxy<TConcrete, TInterface> monitor,
-            Action<TInterface, string> listener)
+            Action<TInterface, string?> listener)
         {
             _listener = listener;
             _monitor = monitor;
@@ -46,6 +46,6 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
 
         public void Dispose() => _monitor._onChange -= OnChange;
 
-        public void OnChange(TInterface options, string name) => _listener.Invoke(options, name);
+        public void OnChange(TInterface options, string? name) => _listener.Invoke(options, name);
     }
 }

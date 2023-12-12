@@ -9,7 +9,7 @@ public class Config : IConfig
 {
     public FirstConfig First { get; set; } = new();
 
-    public string RootValue { get; set; }
+    public string RootValue { get; set; } = string.Empty;
 }
 
 public interface IFirstConfig
@@ -19,7 +19,7 @@ public interface IFirstConfig
 
 public class FirstConfig : IFirstConfig
 {
-    public string FirstValue { get; set; }
+    public string FirstValue { get; set; } = string.Empty;
 
     public SecondConfig Second { get; set; } = new();
 }
@@ -31,7 +31,7 @@ public interface ISecondConfig
 
 public class SecondConfig : ISecondConfig
 {
-    public string SecondValue { get; set; }
+    public string SecondValue { get; set; } = string.Empty;
 
     public ThirdConfig Third { get; set; } = new();
 }
@@ -49,5 +49,5 @@ public class ThirdConfig : IThirdConfig
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
 
-    public string ThirdValue { get; set; }
+    public string ThirdValue { get; set; } = string.Empty;
 }

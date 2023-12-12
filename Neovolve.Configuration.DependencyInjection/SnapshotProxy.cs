@@ -12,7 +12,7 @@ internal class SnapshotProxy<TConcrete, TInterface> : IOptionsSnapshot<TInterfac
         _options = options;
     }
 
-    public TInterface Get(string name)
+    public TInterface Get(string? name)
     {
         return _options.Get(name);
     }

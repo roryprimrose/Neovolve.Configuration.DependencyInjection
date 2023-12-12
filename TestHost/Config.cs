@@ -9,9 +9,9 @@ internal interface IConfig
 
 internal class Config : IConfig
 {
-    public FirstConfig First { get; set; }
+    public FirstConfig First { get; set; } = new();
 
-    public string RootValue { get; set; }
+    public string RootValue { get; set; } = string.Empty;
 }
 
 internal interface IFirstConfig
@@ -21,7 +21,7 @@ internal interface IFirstConfig
 
 internal class FirstConfig : IFirstConfig
 {
-    public string FirstValue { get; set; }
+    public string FirstValue { get; set; } = string.Empty;
 
     public SecondConfig Second { get; set; } = new SecondConfig();
 }
@@ -33,7 +33,7 @@ internal interface ISecondConfig
 
 internal class SecondConfig : ISecondConfig
 {
-    public string SecondValue { get; set; }
+    public string SecondValue { get; set; } = string.Empty;
 
     public ThirdConfig Third { get; set; } = new();
 }
@@ -51,5 +51,5 @@ internal class ThirdConfig : IThirdConfig
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
 
-    public string ThirdValue { get; set; }
+    public string ThirdValue { get; set; } = string.Empty;
 }

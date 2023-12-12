@@ -3,8 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.0</TargetFrameworks>
 		<DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Neovolve.Configuration.DependencyInjection.xml</DocumentationFile>
-		<!--<GeneratePackageOnBuild>True</GeneratePackageOnBuild>-->
-		<!--<TreatWarningsAsErrors>True</TreatWarningsAsErrors>-->
+		<TreatWarningsAsErrors>True</TreatWarningsAsErrors>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<LangVersion>latest</LangVersion>
 		<Nullable>enable</Nullable>
@@ -33,6 +32,10 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Neovolve.Configuration.DependencyInjection.UnitTests" />
 	</ItemGroup>
 
 </Project>
