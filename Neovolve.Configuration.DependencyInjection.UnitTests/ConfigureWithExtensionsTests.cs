@@ -2,6 +2,7 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests;
 
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -60,7 +61,9 @@ public class ConfigureWithExtensionsTests
 
         using var host = builder.Build();
 
-        var actual = host.Services.GetService(expected);
+        using var scope = host.Services.CreateScope();
+
+        var actual = scope.ServiceProvider.GetService(expected);
 
         actual.Should().NotBeNull();
         actual.Should().BeAssignableTo(expected);
