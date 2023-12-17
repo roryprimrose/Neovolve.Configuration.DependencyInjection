@@ -1,12 +1,15 @@
 ﻿// We want the extension methods to be exposed when hosting is available in the calling application
 // ReSharper disable once CheckNamespace
-namespace Microsoft.Extensions.Hosting;
+
+namespace Neovolve.Configuration.DependencyInjection;
 
 using System;
 using Microsoft.Extensions.Logging;
 
-public static partial class ConfigureWithExtensions
+internal static partial class ConfigUpdateExtensions
 {
+    private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.CopyValues";
+
     [LoggerMessage(EventId = 5000, EventName = CopyValuesEventName, Level = LogLevel.Information,
         Message = "Configuration updated on {targetType}")]
     static partial void LogConfigChanged(ILogger logger, Type targetType);

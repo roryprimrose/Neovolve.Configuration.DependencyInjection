@@ -9,7 +9,7 @@
     {
         private static readonly Dictionary<Type, List<PropertyInfo>> _propertyCache = new();
 
-        public static IEnumerable<PropertyInfo> GetBindableProperties(Type targetType, bool cacheProperties)
+        public static IEnumerable<PropertyInfo> GetBindableProperties(this Type targetType, bool cacheProperties)
         {
             if (_propertyCache.TryGetValue(targetType, out var cachedProperties))
             {

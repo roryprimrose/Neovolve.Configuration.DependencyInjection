@@ -7,8 +7,8 @@
         [Fact]
         public void GetBindablePropertiesReturnsCachedProperties()
         {
-            var firstActual = PropertyCache.GetBindableProperties(typeof(CacheableType), true);
-            var secondActual = PropertyCache.GetBindableProperties(typeof(CacheableType), true);
+            var firstActual = typeof(CacheableType).GetBindableProperties(true);
+            var secondActual = typeof(CacheableType).GetBindableProperties(true);
 
             firstActual.Should().BeSameAs(secondActual);
         }
@@ -16,7 +16,7 @@
         [Fact]
         public void GetBindablePropertiesReturnsPublicGetPropertiesOnly()
         {
-            var actual = PropertyCache.GetBindableProperties(typeof(TargetType), false).ToList();
+            var actual = typeof(TargetType).GetBindableProperties(false).ToList();
 
             actual.Should().HaveCount(4);
             actual.Should().Contain(x => x.Name == nameof(TargetType.ReadOnly));
