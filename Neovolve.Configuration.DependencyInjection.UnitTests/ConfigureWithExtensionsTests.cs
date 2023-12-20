@@ -70,6 +70,14 @@ public class ConfigureWithExtensionsTests
     }
 
     [Fact]
+    public void ConfigureWithReloadThrowsExceptionWithNullBuilder()
+    {
+        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, false);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
         Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!);

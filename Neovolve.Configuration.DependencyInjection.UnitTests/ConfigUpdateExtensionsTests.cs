@@ -2,7 +2,6 @@
 
 namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using System.Diagnostics.CodeAnalysis;
     using FluentAssertions;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -26,18 +25,18 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         {
             var injectedConfig = new SimpleType
             {
-                Value = injectedValue
+                First = injectedValue
             };
             var updatedConfig = new SimpleType
             {
-                Value = updatedValue
+                First = updatedValue
             };
             using var provider = BuildServiceProvider();
 
             provider.CopyValues(injectedConfig, updatedConfig);
 
-            injectedConfig.Value.Should().Be(updatedValue);
-            updatedConfig.Value.Should().Be(updatedValue);
+            injectedConfig.First.Should().Be(updatedValue);
+            updatedConfig.First.Should().Be(updatedValue);
         }
 
         [Theory]
@@ -67,18 +66,18 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         {
             var injectedConfig = new SimpleType
             {
-                Value = value
+                First = value
             };
             var updatedConfig = new SimpleType
             {
-                Value = value
+                First = value
             };
             using var provider = BuildServiceProvider();
 
             provider.CopyValues(injectedConfig, updatedConfig);
 
-            injectedConfig.Value.Should().Be(injectedConfig.Value);
-            updatedConfig.Value.Should().Be(updatedConfig.Value);
+            injectedConfig.First.Should().Be(injectedConfig.First);
+            updatedConfig.First.Should().Be(updatedConfig.First);
         }
 
         [Fact]
@@ -200,71 +199,5 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             return services.BuildServiceProvider();
         }
-
-        private class EmptyClass
-        {
-        }
-
-        [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-        private class GetExceptionType
-        {
-            private string _second = Guid.NewGuid().ToString();
-            public string First { get; set; } = Guid.NewGuid().ToString();
-
-            public string Second { get => throw new InvalidOperationException(); set => _second = value; }
-
-            public string Third { get; set; } = Guid.NewGuid().ToString();
-        }
-
-        private class InheritedType : SimpleType
-        {
-            public Guid Other { get; set; }
-        }
-
-        private class NestedRecords
-        {
-            public ChildRecord First { get; set; }
-            public ChildRecord Second { get; set; }
-        }
-
-        private class NestedType
-        {
-            public InheritedType Child { get; set; }
-            public int Something { get; set; }
-        }
-
-        [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-        private class PrivateSetType
-        {
-            public string First { get; set; } = Guid.NewGuid().ToString();
-            public string Second { get; private set; } = Guid.NewGuid().ToString();
-            public string Third { get; set; } = Guid.NewGuid().ToString();
-        }
-
-        [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-        private class ReadOnlyType
-        {
-            public string First { get; set; } = Guid.NewGuid().ToString();
-            public string Second { get; } = Guid.NewGuid().ToString();
-            public string Third { get; set; } = Guid.NewGuid().ToString();
-        }
-
-        [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
-        private class SetExceptionType
-        {
-            private readonly string _second = Guid.NewGuid().ToString();
-            public string First { get; set; } = Guid.NewGuid().ToString();
-
-            public string Second { get => _second; set => throw new InvalidOperationException(); }
-
-            public string Third { get; set; } = Guid.NewGuid().ToString();
-        }
-
-        private class SimpleType
-        {
-            public string? Value { get; set; }
-        }
-
-        private record ChildRecord(string Name, int Start, bool End);
     }
 }

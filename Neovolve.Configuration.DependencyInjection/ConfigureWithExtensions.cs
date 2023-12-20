@@ -30,6 +30,8 @@ public static class ConfigureWithExtensions
     /// </remarks>
     public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder) where T : class
     {
+        _ = builder ?? throw new ArgumentNullException(nameof(builder));
+
         return ConfigureWith<T>(builder, true);
     }
 
@@ -53,6 +55,8 @@ public static class ConfigureWithExtensions
     /// </remarks>
     public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
     {
+        _ = builder ?? throw new ArgumentNullException(nameof(builder));
+
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
         return builder.ConfigureServices((_, services) => services.AddOptions<T>())
