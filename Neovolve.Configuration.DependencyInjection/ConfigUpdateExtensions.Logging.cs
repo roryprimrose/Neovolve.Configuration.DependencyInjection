@@ -14,12 +14,6 @@ internal static partial class ConfigUpdateExtensions
         Message = "Configuration updated on {targetType}")]
     static partial void LogConfigChanged(ILogger logger, Type targetType);
 
-    [LoggerMessage(EventId = 5001, EventName = CopyValuesEventName, Level = LogLevel.Debug,
-        Message =
-            "Configuration updated on property {targetType}.{property} from '{oldValue}' to '{newValue}'")]
-    static partial void LogConfigChanged(ILogger logger, Type targetType, string property, object? oldValue,
-        object? newValue);
-
     [LoggerMessage(EventId = 5003, EventName = CopyValuesEventName, Level = LogLevel.Warning,
         Message =
             "Unable to update property {targetType}.{property} for config change because the property is read only")]
@@ -28,4 +22,10 @@ internal static partial class ConfigUpdateExtensions
     [LoggerMessage(EventId = 5002, EventName = CopyValuesEventName, Level = LogLevel.Error,
         Message = "Failed to copy hot reload config value for property {targetType}.{property}")]
     static partial void LogConfigCopyFail(ILogger logger, Exception ex, Type targetType, string property);
+
+    [LoggerMessage(EventId = 5001, EventName = CopyValuesEventName, Level = LogLevel.Debug,
+        Message =
+            "Configuration updated on property {targetType}.{property} from '{oldValue}' to '{newValue}'")]
+    static partial void LogConfigPropertyChanged(ILogger logger, Type targetType, string property, object? oldValue,
+        object? newValue);
 }
