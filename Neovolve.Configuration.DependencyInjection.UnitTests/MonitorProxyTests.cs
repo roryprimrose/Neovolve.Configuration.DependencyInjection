@@ -1,7 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
     using FluentAssertions;
-    using Microsoft.Extensions.Options;
     using ModelBuilder;
 
     public class MonitorProxyTests
@@ -58,36 +57,6 @@
             source.UpdateConfig(updatedConfig, name);
 
             listenerTriggered.Should().BeTrue();
-        }
-
-        private class WrapperMonitor<T> : IOptionsMonitor<T>
-        {
-            private Action<T, string?> _listener;
-
-            public WrapperMonitor(T config)
-            {
-                CurrentValue = config;
-            }
-
-            public T Get(string? name)
-            {
-                return CurrentValue;
-            }
-
-            public IDisposable? OnChange(Action<T, string?> listener)
-            {
-                _listener = listener;
-
-                return null;
-            }
-
-            public void UpdateConfig(T newConfig, string name)
-            {
-                _listener?.Invoke(newConfig, name);
-                CurrentValue = newConfig;
-            }
-
-            public T CurrentValue { get; private set; }
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
     using NSubstitute;
     using Xunit.Abstractions;
 
-    public class ConfigUpdateExtensionsTests
+    public sealed class ConfigUpdateExtensionsTests : IDisposable
     {
         private readonly ILoggerFactory _factory;
 
@@ -198,6 +198,11 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             services.AddSingleton(_factory);
 
             return services.BuildServiceProvider();
+        }
+
+        public void Dispose()
+        {
+            _factory.Dispose();
         }
     }
 }
