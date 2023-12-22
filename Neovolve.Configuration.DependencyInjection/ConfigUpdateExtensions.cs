@@ -1,15 +1,12 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
     using System;
-    using System.Collections.Concurrent;
     using System.Reflection;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
 
     internal static partial class ConfigUpdateExtensions
     {
-        private static readonly ConcurrentDictionary<Type, ILogger?> _loggerCache = new();
-
         public static void CopyValues<T>(this IServiceProvider serviceProvider, T? injectedConfig, T updatedConfig)
         {
             if (injectedConfig == null)
@@ -69,13 +66,10 @@
 
         private static ILogger? GetLogger<T>(IServiceProvider serviceProvider)
         {
-            return _loggerCache.GetOrAdd(typeof(T), _ =>
-            {
-                var factory = serviceProvider.GetService<ILoggerFactory>();
-                var logger = factory?.CreateLogger<T>();
+            var factory = serviceProvider.GetService<ILoggerFactory>();
+            var logger = factory?.CreateLogger<T>();
 
-                return logger;
-            });
+            return logger;
         }
 
         private static bool IsMatchingValue(object? oldValue, object? updatedValue)
