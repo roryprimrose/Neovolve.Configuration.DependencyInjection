@@ -5,6 +5,7 @@ namespace Microsoft.Extensions.Hosting;
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
@@ -57,9 +58,11 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        _ = builder ?? throw new ArgumentNullException(nameof(builder));
-
-        return builder.ConfigureServices((_, services) => services.AddOptions<T>())
+        return builder.ConfigureServices((_, services) =>
+            {
+                services.AddOptions<T>();
+                services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
+            })
             .RegisterConfigurationRoot<T>(reloadInjectedTypes);
     }
 }

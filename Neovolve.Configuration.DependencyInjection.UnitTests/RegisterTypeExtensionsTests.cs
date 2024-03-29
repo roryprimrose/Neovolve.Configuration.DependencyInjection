@@ -139,6 +139,7 @@
             var section = Substitute.For<IConfigurationSection>();
 
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
+            services.AddTransient<IConfigUpdater, DefaultConfigUpdater>();
             services.RegisterConfigType<SimpleType>(section, true);
 
             using var provider = services.BuildServiceProvider();

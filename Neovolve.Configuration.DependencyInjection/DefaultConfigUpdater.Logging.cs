@@ -6,22 +6,22 @@ namespace Neovolve.Configuration.DependencyInjection;
 using System;
 using Microsoft.Extensions.Logging;
 
-internal static partial class ConfigUpdateExtensions
+public partial class DefaultConfigUpdater
 {
-    private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.CopyValues";
+    private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.IConfigUpdater.UpdateConfig";
 
     [LoggerMessage(EventId = 5000, EventName = CopyValuesEventName, Level = LogLevel.Information,
         Message = "Configuration updated on {targetType}")]
     static partial void LogConfigChanged(ILogger logger, Type targetType);
 
-    [LoggerMessage(EventId = 5003, EventName = CopyValuesEventName, Level = LogLevel.Warning,
+    [LoggerMessage(EventId = 5003, EventName = CopyValuesEventName, Level = LogLevel.Debug,
         Message =
             "Unable to update property {targetType}.{property} for config change because the property is read only")]
     static partial void LogConfigCopyDenied(ILogger logger, Type targetType, string property);
 
     [LoggerMessage(EventId = 5002, EventName = CopyValuesEventName, Level = LogLevel.Error,
         Message = "Failed to copy hot reload config value for property {targetType}.{property}")]
-    static partial void LogConfigCopyFail(ILogger logger, Exception ex, Type targetType, string property);
+    static partial void LogConfigCopyFail(ILogger logger, Type targetType, string property, Exception ex);
 
     [LoggerMessage(EventId = 5001, EventName = CopyValuesEventName, Level = LogLevel.Debug,
         Message =

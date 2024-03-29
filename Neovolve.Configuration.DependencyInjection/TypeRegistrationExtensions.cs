@@ -2,6 +2,7 @@
 {
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
     internal static class TypeRegistrationExtensions
@@ -55,9 +56,9 @@
 
             // Configure the injection of T as a single instance
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
-            services.AddSingleton(x =>
+            services.AddSingleton(c =>
             {
-                var options = x.GetRequiredService<IOptionsMonitor<T>>();
+                var options = c.GetRequiredService<IOptionsMonitor<T>>();
 
                 var injectedValue = options.CurrentValue;
 
@@ -66,7 +67,16 @@
                 {
                     // Respond to config changes and copy across config changes to the original injected value
                     // This will work because the classes are reference types
-                    options.OnChange((config, _) => { x.CopyValues(injectedValue, config); });
+                    options.OnChange((config, name) =>
+                    {
+                        var updater = c.GetRequiredService<IConfigUpdater>();
+
+                        // Figure out the logger to use
+                        var factory = c.GetService<ILoggerFactory>();
+                        var logger = factory?.CreateLogger(injectedValue.GetType());
+                        
+                        updater.UpdateConfig(injectedValue, config, name, logger);
+                    });
                 }
 
                 return injectedValue;
