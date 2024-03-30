@@ -21,11 +21,13 @@
         private static readonly MethodInfo _registerConfigTypeMember =
             _extensionType.GetMethod(nameof(TypeRegistrationExtensions.RegisterConfigType),
                 BindingFlags.Static | BindingFlags.Public, null,
-                new[] { typeof(IServiceCollection), typeof(IConfigurationSection), typeof(bool) }, null) ??
+                new[] { typeof(IServiceCollection), typeof(IConfigurationSection), typeof(IConfigureWithOptions) },
+                null) ??
             throw new InvalidOperationException(
                 $"Unable to find {_extensionType}.{nameof(TypeRegistrationExtensions.RegisterConfigType)}<T>(IServiceCollection services, IConfigurationSection section, bool reloadInjectedTypes) method");
 
-        public static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder, bool reloadInjectedTypes)
+        public static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder,
+            IConfigureWithOptions options)
             where T : class
         {
             // Register the configuration types starting from the root type and recursing through all properties
@@ -47,7 +49,7 @@
                 }
 
                 RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName,
-                    reloadInjectedTypes);
+                    options);
             });
 
             return builder;
@@ -55,7 +57,7 @@
 
         private static void RegisterChildTypes(IConfiguration configuration, IServiceCollection services,
             Type owningType,
-            string sectionPrefix, bool reloadInjectedTypes)
+            string sectionPrefix, IConfigureWithOptions options)
         {
             // Get the reference to the RegisterConfigType method
 
@@ -65,7 +67,7 @@
                 sectionPrefix += ":";
             }
 
-            var properties = owningType.GetBindableProperties(reloadInjectedTypes);
+            var properties = owningType.GetBindableProperties(options.ReloadInjectedRawTypes);
 
             foreach (var propertyInfo in properties)
             {
@@ -80,25 +82,25 @@
 
                 if (configType == typeof(string))
                 {
-                    // Edge case, we can't support strings which are classes
+                    // Edge case, we can't recursively look through strings which are reference types
                     continue;
                 }
 
                 var sectionPath = sectionPrefix + propertyInfo.Name;
 
-                RegisterSection(services, configuration, configType, sectionPath, reloadInjectedTypes);
+                RegisterSection(services, configuration, configType, sectionPath, options);
             }
         }
 
         private static void RegisterSection(IServiceCollection services, IConfiguration configuration, Type configType,
-            string sectionPath, bool reloadInjectedTypes)
+            string sectionPath, IConfigureWithOptions options)
         {
             var section = configuration.GetSection(sectionPath);
 
             var registerConfigType = _registerConfigTypeMember.MakeGenericMethod(configType);
 
             // Call RegisterConfigType<PropertyType>(services, section)
-            registerConfigType.Invoke(null, new object[] { services, section, reloadInjectedTypes });
+            registerConfigType.Invoke(null, new object[] { services, section, options });
 
             var interfaces = configType.GetInterfaces();
 
@@ -112,7 +114,7 @@
             }
 
             RegisterChildTypes(configuration, services, configType, sectionPath,
-                reloadInjectedTypes);
+                options);
         }
     }
 }

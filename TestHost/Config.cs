@@ -23,7 +23,7 @@ internal class FirstConfig : IFirstConfig
 {
     public string FirstValue { get; set; } = string.Empty;
 
-    public SecondConfig Second { get; set; } = new SecondConfig();
+    public SecondConfig Second { get; set; } = new();
 }
 
 internal interface ISecondConfig

@@ -15,7 +15,7 @@
             var injectedConfig = Model.Create<SimpleType>();
             var services = new ServiceCollection();
 
-            services.AddSingleton<SimpleType>(injectedConfig);
+            services.AddSingleton(injectedConfig);
             services.RegisterConfigInterfaceType<SimpleType, ISimpleType>();
 
             using var provider = services.BuildServiceProvider();
@@ -83,6 +83,10 @@
         [Fact]
         public void RegisterConfigTypeDoesNotUpdateExistingConfigurationObjectWhenReloadIsFalse()
         {
+            var options = new ConfigureWithOptions
+            {
+                ReloadInjectedRawTypes = false
+            };
             var injectedConfig = Model.Create<SimpleType>();
             var updatedConfig = Model.Create<SimpleType>();
             var monitor = new WrapperMonitor<SimpleType>(injectedConfig);
@@ -92,7 +96,7 @@
             var section = Substitute.For<IConfigurationSection>();
 
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
-            services.RegisterConfigType<SimpleType>(section, false);
+            services.RegisterConfigType<SimpleType>(section, options);
 
             using var provider = services.BuildServiceProvider();
 
@@ -107,6 +111,10 @@
         [Fact]
         public void RegisterConfigTypeReturnsSingletonTypeFromMonitor()
         {
+            var options = new ConfigureWithOptions
+            {
+                ReloadInjectedRawTypes = true
+            };
             var injectedConfig = Model.Create<SimpleType>();
             var monitor = new WrapperMonitor<SimpleType>(injectedConfig);
             var services = new ServiceCollection();
@@ -114,7 +122,7 @@
             var section = Substitute.For<IConfigurationSection>();
 
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
-            services.RegisterConfigType<SimpleType>(section, true);
+            services.RegisterConfigType<SimpleType>(section, options);
 
             using var provider = services.BuildServiceProvider();
 
@@ -126,10 +134,14 @@
 
             secondActual.Should().BeSameAs(firstActual);
         }
-
+        
         [Fact]
         public void RegisterConfigTypeUpdatesExistingConfigurationObjectWhenReloadIsTrue()
         {
+            var options = new ConfigureWithOptions
+            {
+                ReloadInjectedRawTypes = true
+            };
             var injectedConfig = Model.Create<SimpleType>();
             var updatedConfig = Model.Create<SimpleType>();
             var monitor = new WrapperMonitor<SimpleType>(injectedConfig);
@@ -140,7 +152,7 @@
 
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
             services.AddTransient<IConfigUpdater, DefaultConfigUpdater>();
-            services.RegisterConfigType<SimpleType>(section, true);
+            services.RegisterConfigType<SimpleType>(section, options);
 
             using var provider = services.BuildServiceProvider();
 

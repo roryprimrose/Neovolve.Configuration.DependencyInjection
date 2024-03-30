@@ -15,7 +15,7 @@ using Neovolve.Configuration.DependencyInjection;
 public static class ConfigureWithExtensions
 {
     /// <summary>
-    ///     The <see cref="ConfigureWith{T}(IHostBuilder, bool)" /> method is used to configure the host builder with
+    ///     The <see cref="ConfigureWith{T}(IHostBuilder)" /> method is used to configure the host builder with
     ///     configuration binding of type
     ///     <typeparamref name="T" />
     ///     and all its child types with hot reloading configuration changes onto injected raw configuration types.
@@ -33,7 +33,7 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        return ConfigureWith<T>(builder, true);
+        return ConfigureWith<T>(builder, _ => { });
     }
 
     /// <summary>
@@ -44,25 +44,59 @@ public static class ConfigureWithExtensions
     /// </summary>
     /// <typeparam name="T">The type of configuration to register.</typeparam>
     /// <param name="builder">The host builder to configure.</param>
-    /// <param name="reloadInjectedTypes"><c>true</c> if hot reloading raw types is enabled; otherwise <c>false</c>.</param>
+    /// <param name="reloadInjectedRawTypes"><c>true</c> if hot reloading raw types is enabled; otherwise <c>false</c>.</param>
     /// <returns>The configured host builder.</returns>
     /// <exception cref="ArgumentNullException">The <paramref name="builder" /> parameter is <c>null</c>.</exception>
     /// <remarks>
     ///     This method adds options of type <typeparamref name="T" /> to the service collection and registers the
     ///     configuration root of type <typeparamref name="T" />
     ///     and all child types found.
-    ///     If <paramref name="reloadInjectedTypes" /> is <c>true</c>, the injected raw types defined in the configuration type
+    ///     If <paramref name="reloadInjectedRawTypes" /> is <c>true</c>, the injected raw types defined in the configuration
+    ///     type
     ///     will support hot reloading of updated configuration.
     /// </remarks>
-    public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, bool reloadInjectedTypes) where T : class
+    public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, bool reloadInjectedRawTypes) where T : class
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
+
+        return ConfigureWith<T>(builder, x => { x.ReloadInjectedRawTypes = reloadInjectedRawTypes; });
+    }
+
+    /// <summary>
+    ///     The <see cref="ConfigureWith{T}(IHostBuilder, Action&lt;ConfigureWithOptions&gt;)" /> method is used to configure
+    ///     the host builder with
+    ///     configuration binding of type
+    ///     <typeparamref name="T" />
+    ///     and all its child types.
+    /// </summary>
+    /// <typeparam name="T">The type of configuration to register.</typeparam>
+    /// <param name="builder">The host builder to configure.</param>
+    /// <param name="configure">The configuration options action.</param>
+    /// <returns>The configured host builder.</returns>
+    /// <exception cref="ArgumentNullException">The <paramref name="builder" /> parameter is <c>null</c>.</exception>
+    public static IHostBuilder ConfigureWith<T>(this IHostBuilder builder, Action<ConfigureWithOptions> configure)
+        where T : class
+    {
+        _ = builder ?? throw new ArgumentNullException(nameof(builder));
+
+        var config = new ConfigureWithOptions();
+
+        configure(config);
 
         return builder.ConfigureServices((_, services) =>
             {
                 services.AddOptions<T>();
+
+                // Add the configuration registration
+                services.AddSingleton(c => config);
+
+                // Add a redirect from the configuration type to its interface
+                services.AddSingleton<IConfigureWithOptions>(provider =>
+                    provider.GetRequiredService<ConfigureWithOptions>());
+
+                // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
             })
-            .RegisterConfigurationRoot<T>(reloadInjectedTypes);
+            .RegisterConfigurationRoot<T>(config);
     }
 }

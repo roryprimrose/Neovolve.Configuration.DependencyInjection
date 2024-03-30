@@ -69,6 +69,102 @@ public class ConfigureWithExtensionsTests
         actual.Should().BeAssignableTo(expected);
     }
 
+    [Theory]
+    [InlineData(typeof(ConfigureWithOptions))]
+    [InlineData(typeof(IConfigureWithOptions))]
+    public void ConfigureWithRegistersDefaultOptions(Type optionsType)
+    {
+        var expected = new ConfigureWithOptions();
+        var builder = Host.CreateDefaultBuilder();
+
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["RootValue"] = "This is the root value",
+                    ["First:FirstValue"] = "This is the first value",
+                    ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:Third:ThirdValue"] = "This is the third value"
+                });
+        });
+
+        builder.ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService(optionsType);
+
+        actual.Should().BeEquivalentTo(expected);
+    }
+    
+    [Theory]
+    [InlineData(typeof(ConfigureWithOptions))]
+    [InlineData(typeof(IConfigureWithOptions))]
+    public void ConfigureWithRegistersProvidedOptions(Type optionsType)
+    {
+        var expected = new ConfigureWithOptions();
+        var builder = Host.CreateDefaultBuilder();
+
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["RootValue"] = "This is the root value",
+                    ["First:FirstValue"] = "This is the first value",
+                    ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:Third:ThirdValue"] = "This is the third value"
+                });
+        });
+
+        builder.ConfigureWith<Config>(x =>
+        {
+            x.ReloadInjectedRawTypes = expected.ReloadInjectedRawTypes;
+            x.CustomLogCategory = expected.CustomLogCategory;
+            x.LogCategory = expected.LogCategory;
+            x.LogReadOnlyPropertyWarning = expected.LogReadOnlyPropertyWarning;
+        });
+
+        using var host = builder.Build();
+        
+        var actual = host.Services.GetRequiredService(optionsType);
+
+        actual.Should().BeEquivalentTo(expected);
+    }
+
+    [Theory]
+    [InlineData(typeof(ConfigureWithOptions), true)]
+    [InlineData(typeof(IConfigureWithOptions), false)]
+    public void ConfigureWithRegistersReloadOptions(Type optionsType, bool configureReload)
+    {
+        var expected = new ConfigureWithOptions
+        {
+            ReloadInjectedRawTypes = configureReload
+        };
+        var builder = Host.CreateDefaultBuilder();
+
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["RootValue"] = "This is the root value",
+                    ["First:FirstValue"] = "This is the first value",
+                    ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:Third:ThirdValue"] = "This is the third value"
+                });
+        });
+
+        builder.ConfigureWith<Config>(configureReload);
+
+        using var host = builder.Build();
+        
+        var actual = host.Services.GetRequiredService(optionsType);
+
+        actual.Should().BeEquivalentTo(expected);
+    }
+
     [Fact]
     public void ConfigureWithReloadThrowsExceptionWithNullBuilder()
     {

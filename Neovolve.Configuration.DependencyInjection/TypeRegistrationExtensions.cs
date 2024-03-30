@@ -49,7 +49,7 @@
         }
 
         public static IServiceCollection RegisterConfigType<T>(this IServiceCollection services,
-            IConfigurationSection section, bool reloadInjectedTypes) where T : class
+            IConfigurationSection section, IConfigureWithOptions options) where T : class
         {
             // Configure this type so that we can get access to IOptions<T>, IOptionsSnapshot<T> and IOptionsMonitor<T>
             services.Configure<T>(section);
@@ -58,16 +58,16 @@
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
             services.AddSingleton(c =>
             {
-                var options = c.GetRequiredService<IOptionsMonitor<T>>();
+                var monitor = c.GetRequiredService<IOptionsMonitor<T>>();
 
-                var injectedValue = options.CurrentValue;
+                var injectedValue = monitor.CurrentValue;
 
                 // If we are auto-reloading injected types then set up the event so that we can copy across the config values
-                if (reloadInjectedTypes)
+                if (options.ReloadInjectedRawTypes)
                 {
                     // Respond to config changes and copy across config changes to the original injected value
                     // This will work because the classes are reference types
-                    options.OnChange((config, name) =>
+                    monitor.OnChange((config, name) =>
                     {
                         var updater = c.GetRequiredService<IConfigUpdater>();
 
