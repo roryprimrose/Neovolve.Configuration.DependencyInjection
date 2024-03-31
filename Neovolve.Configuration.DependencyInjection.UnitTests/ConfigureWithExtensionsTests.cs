@@ -43,9 +43,7 @@ public class ConfigureWithExtensionsTests
     [MemberData(nameof(ConfigTypesDataSet), false)]
     public void ConfigureWithConfiguresInjectionTypes(Type expected, bool configureReload)
     {
-        var builder = Host.CreateDefaultBuilder();
-
-        builder.ConfigureAppConfiguration((_, configuration) =>
+        var builder = Host.CreateDefaultBuilder().ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
@@ -55,9 +53,7 @@ public class ConfigureWithExtensionsTests
                     ["First:Second:SecondValue"] = "This is the second value",
                     ["First:Second:Third:ThirdValue"] = "This is the third value"
                 });
-        });
-
-        builder.ConfigureWith<Config>(configureReload);
+        }).ConfigureWith<Config>(configureReload);
 
         using var host = builder.Build();
 
@@ -75,9 +71,7 @@ public class ConfigureWithExtensionsTests
     public void ConfigureWithRegistersDefaultOptions(Type optionsType)
     {
         var expected = new ConfigureWithOptions();
-        var builder = Host.CreateDefaultBuilder();
-
-        builder.ConfigureAppConfiguration((_, configuration) =>
+        var builder = Host.CreateDefaultBuilder().ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>
@@ -87,9 +81,7 @@ public class ConfigureWithExtensionsTests
                     ["First:Second:SecondValue"] = "This is the second value",
                     ["First:Second:Third:ThirdValue"] = "This is the third value"
                 });
-        });
-
-        builder.ConfigureWith<Config>();
+        }).ConfigureWith<Config>();
 
         using var host = builder.Build();
 
@@ -97,37 +89,35 @@ public class ConfigureWithExtensionsTests
 
         actual.Should().BeEquivalentTo(expected);
     }
-    
+
     [Theory]
     [InlineData(typeof(ConfigureWithOptions))]
     [InlineData(typeof(IConfigureWithOptions))]
     public void ConfigureWithRegistersProvidedOptions(Type optionsType)
     {
         var expected = new ConfigureWithOptions();
-        var builder = Host.CreateDefaultBuilder();
-
-        builder.ConfigureAppConfiguration((_, configuration) =>
-        {
-            configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["RootValue"] = "This is the root value",
-                    ["First:FirstValue"] = "This is the first value",
-                    ["First:Second:SecondValue"] = "This is the second value",
-                    ["First:Second:Third:ThirdValue"] = "This is the third value"
-                });
-        });
-
-        builder.ConfigureWith<Config>(x =>
-        {
-            x.ReloadInjectedRawTypes = expected.ReloadInjectedRawTypes;
-            x.CustomLogCategory = expected.CustomLogCategory;
-            x.LogCategory = expected.LogCategory;
-            x.LogReadOnlyPropertyWarning = expected.LogReadOnlyPropertyWarning;
-        });
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["RootValue"] = "This is the root value",
+                        ["First:FirstValue"] = "This is the first value",
+                        ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:Third:ThirdValue"] = "This is the third value"
+                    });
+            })
+            .ConfigureWith<Config>(x =>
+            {
+                x.ReloadInjectedRawTypes = expected.ReloadInjectedRawTypes;
+                x.CustomLogCategory = expected.CustomLogCategory;
+                x.LogCategory = expected.LogCategory;
+                x.LogReadOnlyPropertyWarning = expected.LogReadOnlyPropertyWarning;
+            });
 
         using var host = builder.Build();
-        
+
         var actual = host.Services.GetRequiredService(optionsType);
 
         actual.Should().BeEquivalentTo(expected);
@@ -142,27 +132,49 @@ public class ConfigureWithExtensionsTests
         {
             ReloadInjectedRawTypes = configureReload
         };
-        var builder = Host.CreateDefaultBuilder();
-
-        builder.ConfigureAppConfiguration((_, configuration) =>
-        {
-            configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["RootValue"] = "This is the root value",
-                    ["First:FirstValue"] = "This is the first value",
-                    ["First:Second:SecondValue"] = "This is the second value",
-                    ["First:Second:Third:ThirdValue"] = "This is the third value"
-                });
-        });
-
-        builder.ConfigureWith<Config>(configureReload);
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) =>
+            {
+                configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["RootValue"] = "This is the root value",
+                        ["First:FirstValue"] = "This is the first value",
+                        ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:Third:ThirdValue"] = "This is the third value"
+                    });
+            })
+            .ConfigureWith<Config>(configureReload);
 
         using var host = builder.Build();
-        
+
         var actual = host.Services.GetRequiredService(optionsType);
 
         actual.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void ConfigureWithRegistersRootConfig()
+    {
+        var data = new Dictionary<string, string?>
+        {
+            ["RootValue"] = "This is the root value",
+            ["First:FirstValue"] = "This is the first value",
+            ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:Third:ThirdValue"] = "This is the third value"
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<Config>();
+
+        actual.RootValue.Should().Be(data["RootValue"]);
+        actual.First.FirstValue.Should().Be(data["First:FirstValue"]);
+        actual.First.Second.SecondValue.Should().Be(data["First:Second:SecondValue"]);
+        actual.First.Second.Third.ThirdValue.Should().Be(data["First:Second:Third:ThirdValue"]);
     }
 
     [Fact]
@@ -171,6 +183,39 @@ public class ConfigureWithExtensionsTests
         Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, false);
 
         action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Theory]
+    [InlineData(typeof(IOptions<Config>))]
+    [InlineData(typeof(IOptionsSnapshot<Config>))]
+    [InlineData(typeof(IOptionsMonitor<Config>))]
+    [InlineData(typeof(IOptions<IConfig>))]
+    [InlineData(typeof(IOptionsSnapshot<IConfig>))]
+    [InlineData(typeof(IOptionsMonitor<IConfig>))]
+    public void ConfigureWithRemovesOptionsVariantsForRootConfigAndInterfaces(Type configType)
+    {
+        var data = new Dictionary<string, string?>
+        {
+            ["RootValue"] = "This is the root value",
+            ["First:FirstValue"] = "This is the first value",
+            ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:Third:ThirdValue"] = "This is the third value"
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        using var scope = host.Services.CreateScope();
+
+        var provider = configType.Name.Contains("Snapshot") ? scope.ServiceProvider : host.Services;
+
+        provider.GetService(configType).Should().BeNull();
+
+        var action = new Action(() => provider.GetRequiredService(configType));
+
+        action.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]

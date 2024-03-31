@@ -85,8 +85,6 @@ public static class ConfigureWithExtensions
 
         return builder.ConfigureServices((_, services) =>
             {
-                services.AddOptions<T>();
-
                 // Add the configuration registration
                 services.AddSingleton(c => config);
 

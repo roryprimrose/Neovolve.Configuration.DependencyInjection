@@ -22,7 +22,7 @@
             });
 
             // Add registration to redirect IOptionsSnapshot<TConcrete> to IOptionsSnapshot<TInterface>
-            services.AddTransient<IOptionsSnapshot<TInterface>>(x =>
+            services.AddScoped<IOptionsSnapshot<TInterface>>(x =>
             {
                 var concreteSnapshot = x.GetRequiredService<IOptionsSnapshot<TConcrete>>();
 
@@ -73,8 +73,26 @@
 
                         // Figure out the logger to use
                         var factory = c.GetService<ILoggerFactory>();
-                        var logger = factory?.CreateLogger(injectedValue.GetType());
-                        
+                        ILogger? logger = null;
+
+                        if (factory != null)
+                        {
+                            // Calculate the logger category based on the provided options
+
+                            if (options.LogCategory == LogCategory.Custom)
+                            {
+                                logger = factory?.CreateLogger(options.CustomLogCategory);
+                            }
+                            else if (options.LogCategory == LogCategory.TargetType)
+                            {
+                                logger = factory?.CreateLogger(injectedValue.GetType());
+                            }
+                            else
+                            {
+                                logger = factory?.CreateLogger(nameof(DependencyInjection) + ".ConfigureWith");
+                            }
+                        }
+
                         updater.UpdateConfig(injectedValue, config, name, logger);
                     });
                 }

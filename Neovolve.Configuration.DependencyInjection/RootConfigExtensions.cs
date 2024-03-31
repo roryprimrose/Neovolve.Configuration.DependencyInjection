@@ -40,12 +40,31 @@
 
                 services.AddSingleton(value);
 
+                // The underlying configuration support creates default registrations for IOptions<T> and related interfaces but the service resolution
+                // just returns a new instance of T. This can cause great confusing in calling applications because they get a config instance from the services however it is not populated as expected
+                // To avoid this for the root object, the following code will explicitly null out those registrations
+                // If the application code uses services.GetService<IOptions<T>>() then it will get null back which is an expected scenario when the service is not registered
+                // If the application code uses services.GetRequiredService<IOptions<T>>() then it will throw an exception which is an expected scenario when the service is not registered
+                // The following code simulates the behaviour of when the service is not registered by registering null values for the services
+                services.AddSingleton<IOptions<T>>(_ => null!);
+                services.AddScoped<IOptionsSnapshot<T>>(_ => null!);
+                services.AddSingleton<IOptionsMonitor<T>>(_ => null!);
+
                 var configType = typeof(T);
                 var interfaces = configType.GetInterfaces();
 
                 foreach (var interfaceType in interfaces)
                 {
                     services.AddSingleton(interfaceType, value);
+
+                    // Same as the above IOptions<T> registrations for the root config, we need to wipe out the same variants for the interfaces
+                    var optionsType = typeof(IOptions<>).MakeGenericType(interfaceType);
+                    var snapshotType = typeof(IOptionsSnapshot<>).MakeGenericType(interfaceType);
+                    var monitorType = typeof(IOptionsMonitor<>).MakeGenericType(interfaceType);
+
+                    services.AddSingleton(optionsType, _ => null!);
+                    services.AddScoped(snapshotType, _ => null!);
+                    services.AddSingleton(monitorType, _ => null!);
                 }
 
                 RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName,
