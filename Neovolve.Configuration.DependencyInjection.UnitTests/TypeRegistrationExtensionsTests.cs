@@ -4,10 +4,128 @@
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using NSubstitute;
+    using Xunit.Abstractions;
 
     public class TypeRegistrationExtensionsTests
     {
+        private readonly ITestOutputHelper _output;
+
+        public TypeRegistrationExtensionsTests(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
+        [Fact]
+        public void ConfigureWithDoesNotUpdateClassWithUpdatedDataWhenReloadDisabled()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(false);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithDoesNotUpdateInterfaceWithUpdatedDataWhenReloadIsDisabled()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(false);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<IFirstConfig>();
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+        }
+
+        [Theory]
+        [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.FirstConfig")]
+        [InlineData(LogCategoryType.LibraryType, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
+        [InlineData(LogCategoryType.Custom, "A436F5013F574906BAE263824DEFA140")]
+        public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
+            string expectedCategory)
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+            var factory = Substitute.For<ILoggerFactory>();
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureLogging(x => { x.AddXunit(_output); })
+                .ConfigureServices(x => { x.AddSingleton(factory); })
+                .ConfigureWith<Config>(x =>
+                {
+                    x.LogCategoryType = logCategoryType;
+
+                    if (logCategoryType == LogCategoryType.Custom)
+                    {
+                        x.CustomLogCategory = expectedCategory;
+                    }
+                });
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            factory.Received(1).CreateLogger(expectedCategory);
+        }
+
         [Fact]
         public void ConfigureWithRegistersConfigTypeReturnsClassWithOriginalData()
         {
@@ -15,6 +133,7 @@
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
                 ["First:Second:SecondValue"] = "This is the second value",
                 ["First:Second:Third:ThirdValue"] = "This is the third value"
             };
@@ -35,19 +154,33 @@
             scope.ServiceProvider.GetRequiredService<Config>().RootValue.Should().Be(data["RootValue"]);
             scope.ServiceProvider.GetRequiredService<IConfig>().RootValue.Should().Be(data["RootValue"]);
             scope.ServiceProvider.GetRequiredService<FirstConfig>().FirstValue.Should().Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<FirstConfig>().Id.Should().Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IFirstConfig>().FirstValue.Should().Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IFirstConfig>().Id.Should().Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.FirstValue.Should()
                 .Be(data["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(data["First:Id"]));
             scope.ServiceProvider.GetRequiredService<SecondConfig>().SecondValue.Should()
                 .Be(data["First:Second:SecondValue"]);
             scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SecondConfig>>().CurrentValue.SecondValue.Should()
@@ -82,67 +215,320 @@
                 .Be(data["First:Second:Third:ThirdValue"]);
         }
 
-        [Fact(Skip = "This does not work yet")]
-        public void ConfigureWithRegistersConfigTypeReturnsClassWithUpdatedData()
+        [Fact]
+        public void ConfigureWithUpdatesClassWithUpdatedData()
         {
             var originalData = new Dictionary<string, string?>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
                 ["First:Second:SecondValue"] = "This is the second value",
                 ["First:Second:Third:ThirdValue"] = "This is the third value"
             };
-            var updatedData = originalData.ToDictionary(x => x.Key, x => x.Value + "-" + Guid.NewGuid());
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
             var builder = Host.CreateDefaultBuilder()
-                .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(originalData); })
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 
             using var host = builder.Build();
 
-            var reloadToken =
-                host.Services.GetRequiredService<IConfiguration>().GetReloadToken() as ConfigurationReloadToken;
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            scope.ServiceProvider.GetRequiredService<FirstConfig>().FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<FirstConfig>().Id.Should().Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IFirstConfig>().FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IFirstConfig>().Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<SecondConfig>().SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SecondConfig>>().CurrentValue.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<SecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<ISecondConfig>().SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ISecondConfig>>().CurrentValue.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ISecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<ISecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<ThirdConfig>().ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ThirdConfig>>().CurrentValue.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<ThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IThirdConfig>().ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IThirdConfig>>().CurrentValue.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<IThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesClassWithUpdatedDataOnSecondGetService()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
 
             using var scope = host.Services.CreateScope();
 
-            var firstConfig = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+            var firstActual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
 
-            firstConfig.FirstValue.Should().Be(originalData["First:FirstValue"]);
+            firstActual.FirstValue.Should().Be(originalData["First:FirstValue"]);
 
-            // Copy new values to the original data
-            foreach (var originalDataKey in originalData.Keys)
+            source.Update(updatedData);
+
+            var secondActual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+
+            secondActual.FirstValue.Should().Be(updatedData["First:FirstValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesInterfaceWithUpdatedData()
+        {
+            var originalData = new Dictionary<string, string?>
             {
-                originalData[originalDataKey] = updatedData[originalDataKey];
-            }
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
 
-            reloadToken!.OnReload();
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
 
-            firstConfig.FirstValue.Should().Be(updatedData["First:FirstValue"]);
+            using var host = builder.Build();
 
-            //scope.ServiceProvider.GetRequiredService<Config>().RootValue.Should().Be(originalData["RootValue"]);
-            //scope.ServiceProvider.GetRequiredService<IConfig>().RootValue.Should().Be(originalData["RootValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.FirstValue.Should().Be(updateData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.FirstValue.Should().Be(updateData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.FirstValue.Should().Be(originalData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IFirstConfig>().FirstValue.Should().Be(updateData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.FirstValue.Should().Be(updateData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.FirstValue.Should().Be(updateData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.FirstValue.Should().Be(originalData["First:FirstValue"]);
-            //scope.ServiceProvider.GetRequiredService<SecondConfig>().SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SecondConfig>>().CurrentValue.SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SecondConfig>>().Value.SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<SecondConfig>>().Value.SecondValue.Should().Be(originalData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<ISecondConfig>().SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ISecondConfig>>().CurrentValue.SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ISecondConfig>>().Value.SecondValue.Should().Be(updateData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<ISecondConfig>>().Value.SecondValue.Should().Be(originalData["First:Second:SecondValue"]);
-            //scope.ServiceProvider.GetRequiredService<ThirdConfig>().ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ThirdConfig>>().CurrentValue.ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ThirdConfig>>().Value.ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<ThirdConfig>>().Value.ThirdValue.Should().Be(originalData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IThirdConfig>().ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IThirdConfig>>().CurrentValue.ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IThirdConfig>>().Value.ThirdValue.Should().Be(updateData["First:Second:Third:ThirdValue"]);
-            //scope.ServiceProvider.GetRequiredService<IOptions<IThirdConfig>>().Value.ThirdValue.Should().Be(originalData["First:Second:Third:ThirdValue"]);
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<IFirstConfig>();
+
+            actual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            scope.ServiceProvider.GetRequiredService<FirstConfig>().FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<FirstConfig>().Id.Should().Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<FirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<FirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IFirstConfig>().FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IFirstConfig>().Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>().CurrentValue.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.FirstValue.Should()
+                .Be(updatedData["First:FirstValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<IFirstConfig>>().Value.Id.Should()
+                .Be(Guid.Parse(updatedData["First:Id"]));
+            scope.ServiceProvider.GetRequiredService<SecondConfig>().SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<SecondConfig>>().CurrentValue.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<SecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<SecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<ISecondConfig>().SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ISecondConfig>>().CurrentValue.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ISecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<ISecondConfig>>().Value.SecondValue.Should()
+                .Be(updatedData["First:Second:SecondValue"]);
+            scope.ServiceProvider.GetRequiredService<ThirdConfig>().ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<ThirdConfig>>().CurrentValue.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<ThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<ThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IThirdConfig>().ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IThirdConfig>>().CurrentValue.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptionsSnapshot<IThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+            scope.ServiceProvider.GetRequiredService<IOptions<IThirdConfig>>().Value.ThirdValue.Should()
+                .Be(updatedData["First:Second:Third:ThirdValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesInterfaceWithUpdatedDataOnSecondGetService()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var firstActual = scope.ServiceProvider.GetRequiredService<IFirstConfig>();
+
+            firstActual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            var secondActual = scope.ServiceProvider.GetRequiredService<IFirstConfig>();
+
+            secondActual.FirstValue.Should().Be(updatedData["First:FirstValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesMonitorInterfaceWithUpdatedData()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var actual = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>();
+
+            actual.CurrentValue.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            actual.CurrentValue.FirstValue.Should().Be(updatedData["First:FirstValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesMonitorInterfaceWithUpdatedDataOnSecondGetService()
+        {
+            var originalData = new Dictionary<string, string?>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var firstActual = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>();
+
+            firstActual.CurrentValue.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            var secondActual = scope.ServiceProvider.GetRequiredService<IOptionsMonitor<IFirstConfig>>();
+
+            secondActual.CurrentValue.FirstValue.Should().Be(updatedData["First:FirstValue"]);
         }
 
         [Theory]
@@ -178,6 +564,7 @@
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
                 ["First:Second:SecondValue"] = "This is the second value",
                 ["First:Second:Third:ThirdValue"] = "This is the third value"
             };

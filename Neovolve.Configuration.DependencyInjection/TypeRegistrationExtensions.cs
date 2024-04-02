@@ -79,17 +79,18 @@
                         {
                             // Calculate the logger category based on the provided options
 
-                            if (options.LogCategory == LogCategory.Custom)
+                            if (options.LogCategoryType == LogCategoryType.Custom)
                             {
-                                logger = factory?.CreateLogger(options.CustomLogCategory);
+                                logger = factory.CreateLogger(options.CustomLogCategory);
                             }
-                            else if (options.LogCategory == LogCategory.TargetType)
+                            else if (options.LogCategoryType == LogCategoryType.TargetType)
                             {
-                                logger = factory?.CreateLogger(injectedValue.GetType());
+                                logger = factory.CreateLogger(injectedValue.GetType());
                             }
                             else
                             {
-                                logger = factory?.CreateLogger(nameof(DependencyInjection) + ".ConfigureWith");
+                                logger = factory.CreateLogger(typeof(TypeRegistrationExtensions).Namespace
+                                                               + ".ConfigureWith");
                             }
                         }
 

@@ -10,7 +10,7 @@
         public string CustomLogCategory { get; set; } = string.Empty;
         
         /// <inheritdoc />
-        public LogCategory LogCategory { get; set; } = LogCategory.TargetType;
+        public LogCategoryType LogCategoryType { get; set; } = LogCategoryType.TargetType;
         
         /// <inheritdoc />
         public ReadOnlyPropertyWarning LogReadOnlyPropertyWarning { get; set; } =

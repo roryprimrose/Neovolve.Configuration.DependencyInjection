@@ -65,6 +65,14 @@ public class ConfigureWithExtensionsTests
         actual.Should().BeAssignableTo(expected);
     }
 
+    [Fact]
+    public void ConfigureWithOptionsThrowsExceptionWithNullBuilder()
+    {
+        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, x => { });
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
     [Theory]
     [InlineData(typeof(ConfigureWithOptions))]
     [InlineData(typeof(IConfigureWithOptions))]
@@ -112,7 +120,7 @@ public class ConfigureWithExtensionsTests
             {
                 x.ReloadInjectedRawTypes = expected.ReloadInjectedRawTypes;
                 x.CustomLogCategory = expected.CustomLogCategory;
-                x.LogCategory = expected.LogCategory;
+                x.LogCategoryType = expected.LogCategoryType;
                 x.LogReadOnlyPropertyWarning = expected.LogReadOnlyPropertyWarning;
             });
 

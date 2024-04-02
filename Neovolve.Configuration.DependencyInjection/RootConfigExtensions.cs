@@ -14,17 +14,13 @@
         private static readonly MethodInfo _registerConfigInterfaceTypeMember =
             _extensionType.GetMethod(nameof(TypeRegistrationExtensions.RegisterConfigInterfaceType),
                 BindingFlags.Static | BindingFlags.Public,
-                null, new[] { typeof(IServiceCollection) }, null) ??
-            throw new InvalidOperationException(
-                $"Unable to find {_extensionType}.{nameof(TypeRegistrationExtensions.RegisterConfigInterfaceType)}<TConcrete, TInterface>(IServiceCollection services) method");
+                null, [typeof(IServiceCollection)], null)!;
 
         private static readonly MethodInfo _registerConfigTypeMember =
             _extensionType.GetMethod(nameof(TypeRegistrationExtensions.RegisterConfigType),
                 BindingFlags.Static | BindingFlags.Public, null,
-                new[] { typeof(IServiceCollection), typeof(IConfigurationSection), typeof(IConfigureWithOptions) },
-                null) ??
-            throw new InvalidOperationException(
-                $"Unable to find {_extensionType}.{nameof(TypeRegistrationExtensions.RegisterConfigType)}<T>(IServiceCollection services, IConfigurationSection section, bool reloadInjectedTypes) method");
+                [typeof(IServiceCollection), typeof(IConfigurationSection), typeof(IConfigureWithOptions)],
+                null)!;
 
         public static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder,
             IConfigureWithOptions options)
@@ -119,7 +115,7 @@
             var registerConfigType = _registerConfigTypeMember.MakeGenericMethod(configType);
 
             // Call RegisterConfigType<PropertyType>(services, section)
-            registerConfigType.Invoke(null, new object[] { services, section, options });
+            registerConfigType.Invoke(null, [services, section, options]);
 
             var interfaces = configType.GetInterfaces();
 
@@ -129,7 +125,7 @@
                     _registerConfigInterfaceTypeMember.MakeGenericMethod(configType, interfaceType);
 
                 // Call RegisterConfigInterfaceType<PropertyType, InterfaceType>(services, section)
-                registerConfigInterfaceType.Invoke(null, new object[] { services });
+                registerConfigInterfaceType.Invoke(null, [services]);
             }
 
             RegisterChildTypes(configuration, services, configType, sectionPath,

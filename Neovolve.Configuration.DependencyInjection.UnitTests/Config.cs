@@ -17,13 +17,16 @@ internal class Config : IConfig
 internal interface IFirstConfig
 {
     string FirstValue { get; }
+
+    Guid Id { get; }
+
     SecondConfig Second { get; }
 }
 
 internal class FirstConfig : IFirstConfig
 {
     public string FirstValue { get; set; } = string.Empty;
-
+    public Guid Id { get; set; }
     public SecondConfig Second { get; set; } = new();
 }
 

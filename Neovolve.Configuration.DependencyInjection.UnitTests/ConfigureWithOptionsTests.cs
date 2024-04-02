@@ -10,7 +10,7 @@
             var actual = new ConfigureWithOptions();
 
             actual.CustomLogCategory.Should().BeEmpty();
-            actual.LogCategory.Should().Be(LogCategory.TargetType);
+            actual.LogCategoryType.Should().Be(LogCategoryType.TargetType);
             actual.LogReadOnlyPropertyWarning.Should().Be(ReadOnlyPropertyWarning.None);
             actual.ReloadInjectedRawTypes.Should().BeTrue();
         }

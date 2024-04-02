@@ -1,10 +1,10 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
-/// The <see cref="LogCategory"/>
+/// The <see cref="LogCategoryType"/>
 /// enum defines how the log category is determined when logging information about configuration binding.
 /// </summary>
-public enum LogCategory
+public enum LogCategoryType
 {
     /// <summary>
     /// Log messages are written to a category of the configuration type being bound.

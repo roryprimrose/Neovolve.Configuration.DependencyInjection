@@ -9,15 +9,15 @@ using Microsoft.Extensions.DependencyInjection;
 public interface IConfigureWithOptions
 {
     /// <summary>
-    ///     Gets the custom log category used when <see cref="LogCategory" /> is
-    ///     <see cref="DependencyInjection.LogCategory.Custom" />.
+    ///     Gets the custom log category used when <see cref="LogCategoryType" /> is
+    ///     <see cref="LogCategoryType.Custom" />.
     /// </summary>
     string CustomLogCategory { get; }
 
     /// <summary>
     ///     Gets the log category to use when logging messages for configuration binding.
     /// </summary>
-    LogCategory LogCategory { get; }
+    LogCategoryType LogCategoryType { get; }
 
     /// <summary>
     ///     Gets when log warning messages are written as read only properties are encountered.
