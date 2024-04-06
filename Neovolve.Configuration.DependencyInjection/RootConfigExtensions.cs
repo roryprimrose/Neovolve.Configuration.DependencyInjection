@@ -90,7 +90,7 @@
 
                 if (configType.IsValueType)
                 {
-                    // We don't support value types
+                    // We don't support value types as injected child types
                     // Configuration types must be classes
                     continue;
                 }

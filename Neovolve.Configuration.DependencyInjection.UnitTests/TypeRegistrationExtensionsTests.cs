@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
+    using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +22,7 @@
         [Fact]
         public void ConfigureWithDoesNotUpdateClassWithUpdatedDataWhenReloadDisabled()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -52,7 +53,7 @@
         [Fact]
         public void ConfigureWithDoesNotUpdateInterfaceWithUpdatedDataWhenReloadIsDisabled()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -87,7 +88,7 @@
         public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
             string expectedCategory)
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -218,7 +219,7 @@
         [Fact]
         public void ConfigureWithUpdatesClassWithUpdatedData()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -311,7 +312,7 @@
         [Fact]
         public void ConfigureWithUpdatesClassWithUpdatedDataOnSecondGetService()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -323,6 +324,11 @@
             var source = new ReloadSource(originalData);
 
             var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 
@@ -342,9 +348,9 @@
         }
 
         [Fact]
-        public void ConfigureWithUpdatesInterfaceWithUpdatedData()
+        public void ConfigureWithUpdatesClassWithUpdatedDataOnServiceResolvedAfterUpdate()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -356,6 +362,49 @@
             var source = new ReloadSource(originalData);
 
             var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var firstActual = scope.ServiceProvider.GetRequiredService<FirstConfig>();
+
+            firstActual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            var secondActual = scope.ServiceProvider.GetRequiredService<SecondConfig>();
+
+            secondActual.SecondValue.Should().Be(updatedData["First:Second:SecondValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesInterfaceWithUpdatedData()
+        {
+            var originalData = new Dictionary<string, string>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 
@@ -437,7 +486,7 @@
         [Fact]
         public void ConfigureWithUpdatesInterfaceWithUpdatedDataOnSecondGetService()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -449,6 +498,11 @@
             var source = new ReloadSource(originalData);
 
             var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 
@@ -468,9 +522,9 @@
         }
 
         [Fact]
-        public void ConfigureWithUpdatesMonitorInterfaceWithUpdatedData()
+        public void ConfigureWithUpdatesInterfaceWithUpdatedDataOnServiceResolvedAfterUpdate()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -482,6 +536,49 @@
             var source = new ReloadSource(originalData);
 
             var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
+                .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
+                .ConfigureWith<Config>(true);
+
+            using var host = builder.Build();
+
+            using var scope = host.Services.CreateScope();
+
+            var firstActual = scope.ServiceProvider.GetRequiredService<IFirstConfig>();
+
+            firstActual.FirstValue.Should().Be(originalData["First:FirstValue"]);
+
+            source.Update(updatedData);
+
+            var secondActual = scope.ServiceProvider.GetRequiredService<ISecondConfig>();
+
+            secondActual.SecondValue.Should().Be(updatedData["First:Second:SecondValue"]);
+        }
+
+        [Fact]
+        public void ConfigureWithUpdatesMonitorInterfaceWithUpdatedData()
+        {
+            var originalData = new Dictionary<string, string>
+            {
+                ["RootValue"] = "This is the root value",
+                ["First:FirstValue"] = "This is the first value",
+                ["First:Id"] = Guid.NewGuid().ToString(),
+                ["First:Second:SecondValue"] = "This is the second value",
+                ["First:Second:Third:ThirdValue"] = "This is the third value"
+            };
+            var updatedData = originalData.ToDictionary(x => x.Key, x => Guid.NewGuid().ToString());
+            var source = new ReloadSource(originalData);
+
+            var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 
@@ -501,7 +598,7 @@
         [Fact]
         public void ConfigureWithUpdatesMonitorInterfaceWithUpdatedDataOnSecondGetService()
         {
-            var originalData = new Dictionary<string, string?>
+            var originalData = new Dictionary<string, string>
             {
                 ["RootValue"] = "This is the root value",
                 ["First:FirstValue"] = "This is the first value",
@@ -513,6 +610,11 @@
             var source = new ReloadSource(originalData);
 
             var builder = Host.CreateDefaultBuilder()
+                .ConfigureLogging(x =>
+                {
+                    x.SetMinimumLevel(LogLevel.Debug);
+                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
 

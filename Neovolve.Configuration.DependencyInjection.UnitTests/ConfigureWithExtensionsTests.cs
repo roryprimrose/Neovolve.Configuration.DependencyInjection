@@ -121,7 +121,7 @@ public class ConfigureWithExtensionsTests
                 x.ReloadInjectedRawTypes = expected.ReloadInjectedRawTypes;
                 x.CustomLogCategory = expected.CustomLogCategory;
                 x.LogCategoryType = expected.LogCategoryType;
-                x.LogReadOnlyPropertyWarning = expected.LogReadOnlyPropertyWarning;
+                x.LogReadOnlyPropertyType = expected.LogReadOnlyPropertyType;
             });
 
         using var host = builder.Build();

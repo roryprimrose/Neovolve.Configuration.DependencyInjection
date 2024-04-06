@@ -14,10 +14,10 @@ public partial class DefaultConfigUpdater
         Message = "Configuration updated on {targetType}")]
     static partial void LogConfigChanged(ILogger logger, Type targetType);
 
-    [LoggerMessage(EventId = 5003, EventName = CopyValuesEventName, Level = LogLevel.Debug,
+    [LoggerMessage(EventId = 5003, EventName = CopyValuesEventName,
         Message =
             "Unable to update property {targetType}.{property} for config change because the property is read only")]
-    static partial void LogConfigCopyDenied(ILogger logger, Type targetType, string property);
+    static partial void LogConfigCopyDenied(ILogger logger, LogLevel logLevel, Type targetType, string property);
 
     [LoggerMessage(EventId = 5002, EventName = CopyValuesEventName, Level = LogLevel.Error,
         Message = "Failed to copy hot reload config value for property {targetType}.{property}")]

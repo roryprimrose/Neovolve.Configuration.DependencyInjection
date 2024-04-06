@@ -11,7 +11,7 @@
 
             actual.CustomLogCategory.Should().BeEmpty();
             actual.LogCategoryType.Should().Be(LogCategoryType.TargetType);
-            actual.LogReadOnlyPropertyWarning.Should().Be(ReadOnlyPropertyWarning.None);
+            actual.LogReadOnlyPropertyType.Should().Be(LogReadOnlyPropertyType.None);
             actual.ReloadInjectedRawTypes.Should().BeTrue();
         }
     }

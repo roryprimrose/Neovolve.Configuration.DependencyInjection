@@ -1,6 +1,7 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 ///     The <see cref="IConfigureWithOptions" /> interface defines the options used to configure how the configuration
@@ -20,9 +21,14 @@ public interface IConfigureWithOptions
     LogCategoryType LogCategoryType { get; }
 
     /// <summary>
+    ///     Gets the log level to use when logging that updates are detected for read only properties.
+    /// </summary>
+    LogLevel LogReadOnlyPropertyLevel { get; }
+
+    /// <summary>
     ///     Gets when log warning messages are written as read only properties are encountered.
     /// </summary>
-    ReadOnlyPropertyWarning LogReadOnlyPropertyWarning { get; }
+    LogReadOnlyPropertyType LogReadOnlyPropertyType { get; }
 
     /// <summary>
     ///     Gets whether injected raw types are updated with reloaded configuration.

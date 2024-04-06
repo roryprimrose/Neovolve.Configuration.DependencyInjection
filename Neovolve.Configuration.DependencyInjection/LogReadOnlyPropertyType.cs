@@ -1,11 +1,11 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
-///     The <see cref="ReadOnlyPropertyWarning" />
+///     The <see cref="LogReadOnlyPropertyType" />
 ///     enum defines the circumstances in which warnings are logged when read only properties cannot be updated on
 ///     configuration reload.
 /// </summary>
-public enum ReadOnlyPropertyWarning
+public enum LogReadOnlyPropertyType
 {
     /// <summary>
     ///     Logs a warning for all read only properties.
@@ -13,13 +13,13 @@ public enum ReadOnlyPropertyWarning
     All,
 
     /// <summary>
-    ///     Logs a warning for read only properties of primitive types.
+    ///     Logs a warning for read only properties of value types and strings.
     /// </summary>
     /// <remarks>
     ///     This will log warnings for read only properties only if the property type is a value type or is a
     ///     <see cref="string" />.
     /// </remarks>
-    PrimitiveTypesOnly,
+    ValueTypesOnly,
 
     /// <summary>
     ///     Disables warning logs for read only properties.

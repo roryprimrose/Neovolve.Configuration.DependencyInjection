@@ -11,6 +11,17 @@ using Microsoft.Extensions.Logging;
 /// </summary>
 public partial class DefaultConfigUpdater : IConfigUpdater
 {
+    private readonly IConfigureWithOptions _options;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="DefaultConfigUpdater" /> class.
+    /// </summary>
+    /// <param name="options">The options for updating configuration values.</param>
+    public DefaultConfigUpdater(IConfigureWithOptions options)
+    {
+        _options = options;
+    }
+
     /// <inheritdoc />
     public void UpdateConfig<T>(T? injectedConfig, T updatedConfig, string? name, ILogger? logger)
     {
@@ -126,10 +137,7 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
         if (IsWritable(property) == false)
         {
-            if (logger != null)
-            {
-                LogConfigCopyDenied(logger, targetType, property.Name);
-            }
+            ReportReadOnlyProperty(targetType, property, logger);
 
             return false;
         }
@@ -187,5 +195,44 @@ public partial class DefaultConfigUpdater : IConfigUpdater
         }
 
         return true;
+    }
+
+    private bool IsValueType(PropertyInfo property)
+    {
+        if (property.PropertyType.IsValueType)
+        {
+            return true;
+        }
+
+        if (property.PropertyType == typeof(string))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ReportReadOnlyProperty(Type targetType, PropertyInfo property, ILogger? logger)
+    {
+        if (logger == null)
+        {
+            return;
+        }
+
+        if (_options.LogReadOnlyPropertyType == LogReadOnlyPropertyType.None)
+        {
+            // Logging of readonly properties is disabled
+            return;
+        }
+
+        if (_options.LogReadOnlyPropertyType == LogReadOnlyPropertyType.All)
+        {
+            LogConfigCopyDenied(logger, _options.LogReadOnlyPropertyLevel, targetType, property.Name);
+        }
+
+        if (IsValueType(property))
+        {
+            LogConfigCopyDenied(logger, _options.LogReadOnlyPropertyLevel, targetType, property.Name);
+        }
     }
 }

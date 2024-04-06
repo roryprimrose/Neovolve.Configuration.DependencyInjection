@@ -49,6 +49,16 @@
         string? Third { get; }
     }
 
+    internal class ReadOnlyType<T>
+    {
+        public ReadOnlyType(T value)
+        {
+            Value = value;
+        }
+
+        public T Value { get; }
+    }
+
     [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Local")]
     internal class ReadOnlyType : ISimpleType
     {
