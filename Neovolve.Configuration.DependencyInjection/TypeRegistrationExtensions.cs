@@ -49,7 +49,7 @@
         }
 
         public static IServiceCollection RegisterConfigType<T>(this IServiceCollection services,
-            IConfigurationSection section, IConfigureWithOptions options) where T : class
+            IConfigurationSection section) where T : class
         {
             // Configure this type so that we can get access to IOptions<T>, IOptionsSnapshot<T> and IOptionsMonitor<T>
             services.Configure<T>(section);
@@ -61,6 +61,8 @@
                 var monitor = c.GetRequiredService<IOptionsMonitor<T>>();
 
                 var injectedValue = monitor.CurrentValue;
+
+                var options = c.GetRequiredService<IConfigureWithOptions>();
 
                 // If we are auto-reloading injected types then set up the event so that we can copy across the config values
                 if (options.ReloadInjectedRawTypes)

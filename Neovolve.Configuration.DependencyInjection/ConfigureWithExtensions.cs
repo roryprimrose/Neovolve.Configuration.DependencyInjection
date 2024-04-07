@@ -6,6 +6,7 @@ namespace Microsoft.Extensions.Hosting;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
@@ -79,14 +80,29 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        var config = new ConfigureWithOptions();
-
-        configure(config);
-
         return builder.ConfigureServices((_, services) =>
             {
                 // Add the configuration registration
-                services.AddSingleton(c => config);
+                services.AddSingleton(c =>
+                {
+                    var config = new ConfigureWithOptions();
+
+                    var hostEnvironment = c.GetService<IHostEnvironment>();
+
+                    if (hostEnvironment != null 
+                        && hostEnvironment.IsDevelopment())
+                    {
+                        config.LogReadOnlyPropertyLevel = LogLevel.Warning;
+                    }
+                    else
+                    {
+                        config.LogReadOnlyPropertyLevel = LogLevel.Debug;
+                    }
+
+                    configure(config);
+
+                    return config;
+                });
 
                 // Add a redirect from the configuration type to its interface
                 services.AddSingleton<IConfigureWithOptions>(provider =>
@@ -95,6 +111,6 @@ public static class ConfigureWithExtensions
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
             })
-            .RegisterConfigurationRoot<T>(config);
+            .RegisterConfigurationRoot<T>();
     }
 }

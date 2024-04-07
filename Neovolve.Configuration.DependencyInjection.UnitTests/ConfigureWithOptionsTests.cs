@@ -1,6 +1,7 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
     using FluentAssertions;
+    using Microsoft.Extensions.Logging;
 
     public class ConfigureWithOptionsTests
     {
@@ -11,7 +12,8 @@
 
             actual.CustomLogCategory.Should().BeEmpty();
             actual.LogCategoryType.Should().Be(LogCategoryType.TargetType);
-            actual.LogReadOnlyPropertyType.Should().Be(LogReadOnlyPropertyType.None);
+            actual.LogReadOnlyPropertyType.Should().Be(LogReadOnlyPropertyType.ValueTypesOnly);
+            actual.LogReadOnlyPropertyLevel.Should().Be(LogLevel.Warning);
             actual.ReloadInjectedRawTypes.Should().BeTrue();
         }
     }

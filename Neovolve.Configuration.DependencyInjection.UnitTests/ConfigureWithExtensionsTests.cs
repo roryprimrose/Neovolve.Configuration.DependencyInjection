@@ -4,7 +4,9 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using NSubstitute;
 
 public class ConfigureWithExtensionsTests
 {
@@ -36,6 +38,29 @@ public class ConfigureWithExtensionsTests
         yield return new object[] { typeof(IOptions<IThirdConfig>), configureReload };
         yield return new object[] { typeof(IOptionsSnapshot<IThirdConfig>), configureReload };
         yield return new object[] { typeof(IOptionsMonitor<IThirdConfig>), configureReload };
+    }
+
+    [Theory]
+    [InlineData(true, LogLevel.Warning)]
+    [InlineData(false, LogLevel.Debug)]
+    public void ConfigureWithConfiguresDefaultReadOnlyPropertyLogLevelBasedOnEnvironment(bool isDevelopment,
+        LogLevel expected)
+    {
+        var hostEnvironment = Substitute.For<IHostEnvironment>();
+
+        hostEnvironment.EnvironmentName.Returns(isDevelopment ? "Development" : "Production");
+
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureServices(services => { services.AddSingleton(hostEnvironment); })
+            .ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        using var scope = host.Services.CreateScope();
+
+        var actual = scope.ServiceProvider.GetRequiredService<IConfigureWithOptions>();
+
+        actual.LogReadOnlyPropertyLevel.Should().Be(expected);
     }
 
     [Theory]
@@ -122,6 +147,7 @@ public class ConfigureWithExtensionsTests
                 x.CustomLogCategory = expected.CustomLogCategory;
                 x.LogCategoryType = expected.LogCategoryType;
                 x.LogReadOnlyPropertyType = expected.LogReadOnlyPropertyType;
+                x.LogReadOnlyPropertyLevel = expected.LogReadOnlyPropertyLevel;
             });
 
         using var host = builder.Build();

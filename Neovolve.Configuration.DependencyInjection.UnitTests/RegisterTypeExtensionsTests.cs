@@ -94,9 +94,10 @@
             var name = Guid.NewGuid().ToString();
 
             var section = Substitute.For<IConfigurationSection>();
-
+            
+            services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
-            services.RegisterConfigType<SimpleType>(section, options);
+            services.RegisterConfigType<SimpleType>(section);
 
             using var provider = services.BuildServiceProvider();
 
@@ -121,8 +122,9 @@
 
             var section = Substitute.For<IConfigurationSection>();
 
+            services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
-            services.RegisterConfigType<SimpleType>(section, options);
+            services.RegisterConfigType<SimpleType>(section);
 
             using var provider = services.BuildServiceProvider();
 
@@ -149,10 +151,11 @@
             var name = Guid.NewGuid().ToString();
 
             var section = Substitute.For<IConfigurationSection>();
-
+            
+            services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
             services.AddTransient<IConfigUpdater, DefaultConfigUpdater>();
-            services.RegisterConfigType<SimpleType>(section, options);
+            services.RegisterConfigType<SimpleType>(section);
 
             using var provider = services.BuildServiceProvider();
 
