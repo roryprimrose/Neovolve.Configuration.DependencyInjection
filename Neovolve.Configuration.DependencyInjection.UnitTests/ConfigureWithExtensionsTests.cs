@@ -120,7 +120,8 @@ public class ConfigureWithExtensionsTests
 
         var actual = host.Services.GetRequiredService(optionsType);
 
-        actual.Should().BeEquivalentTo(expected);
+        // Exclude log level because it is based on the current environment which is covered by different tests
+        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
     }
 
     [Theory]
