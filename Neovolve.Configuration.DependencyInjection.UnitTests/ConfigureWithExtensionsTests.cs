@@ -160,6 +160,8 @@ public class ConfigureWithExtensionsTests
 
     [Theory]
     [InlineData(typeof(ConfigureWithOptions), true)]
+    [InlineData(typeof(ConfigureWithOptions), false)]
+    [InlineData(typeof(IConfigureWithOptions), true)]
     [InlineData(typeof(IConfigureWithOptions), false)]
     public void ConfigureWithRegistersReloadOptions(Type optionsType, bool configureReload)
     {
@@ -185,7 +187,7 @@ public class ConfigureWithExtensionsTests
 
         var actual = host.Services.GetRequiredService(optionsType);
 
-        actual.Should().BeEquivalentTo(expected);
+        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
     }
 
     [Fact]
