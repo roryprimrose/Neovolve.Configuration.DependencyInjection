@@ -24,13 +24,13 @@
 
     internal class NestedRecords
     {
-        public ChildRecord First { get; set; }
-        public ChildRecord Second { get; set; }
+        public ChildRecord? First { get; set; }
+        public ChildRecord? Second { get; set; }
     }
 
     internal class NestedType
     {
-        public InheritedType Child { get; set; }
+        public InheritedType Child { get; set; } = new();
         public int Something { get; set; }
     }
 

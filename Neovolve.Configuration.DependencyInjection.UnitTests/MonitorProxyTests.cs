@@ -8,7 +8,6 @@
         [Fact]
         public void CurrentValueReturnsFromSource()
         {
-            var name = Guid.NewGuid().ToString();
             var expected = Model.Create<SimpleType>();
 
             var source = new WrapperMonitor<SimpleType>(expected);

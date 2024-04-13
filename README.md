@@ -1,6 +1,6 @@
 ﻿# Introduction
 
-The Neovolve.Configuration.DependencyInjection NuGet package provides `IHostBuilder` extension methods for adding dependency injection support for nested configuration types with hot reload support.
+The Neovolve.Configuration.DependencyInjection NuGet package provides `IHostBuilder` extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.
 
 [![GitHub license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection/blob/master/LICENSE)&nbsp;&nbsp;&nbsp;[![Nuget](https://img.shields.io/nuget/v/Neovolve.Configuration.DependencyInjection.svg)&nbsp;&nbsp;&nbsp;![Nuget](https://img.shields.io/nuget/dt/Neovolve.Configuration.DependencyInjection.svg)](https://www.nuget.org/packages/Neovolve.Configuration.DependencyInjection)
 
@@ -11,7 +11,7 @@ The Neovolve.Configuration.DependencyInjection NuGet package provides `IHostBuil
 The package can be installed from NuGet using ```Install-Package Neovolve.Configuration.DependencyInjection```.
 
 # Usage
-This package requires that the application bootstrapping provide a root configuration type that defines the configuration structure that the application uses. 
+This package requires that the application bootstrapping provide a root configuration class that matches the configuration structure that the application uses. 
 
 The `ConfigureWith<T>` extension method registers the configuration type, all nested configuration types and all interfaces found as services in the host application. It will also ensure that `IOptions<>`, `IOptionsSnapshot<>` and `IOptionsMonitor<>` types are registered with the class types found under the root config type as well as all their interfaces.
 
@@ -99,7 +99,7 @@ For other platforms, such as console applications, this would be registered like
 
 ```csharp
 var builder = Host.CreateDefaultBuilder()
-    .ConfigureWith<RootConfig>()
+    .ConfigureWith<RootConfig>();
 ```
 
 Given the above example, the following services would be registered with the host application:
@@ -118,13 +118,11 @@ Given the above example, the following services would be registered with the hos
 See [Options pattern in .NET -> Options interfaces](https://learn.microsoft.com/en-us/dotnet/core/extensions/options#options-interfaces) for more information on the `IOptions<>`, `IOptionsSnapshot<>` and `IOptionsMonitor<>` types.
 
 # Hot reload support
-The options binding system in .NET Core supports hot reload of configuration data. This is typically done by watching the configuration source for changes and then reloading the configuration data. This is useful for scenarios where configuration data is stored in a file and the application needs to react to changes in the file without needing to restart the application. This support is provided by the `IOptionsSnapshot<>` and `IOptionsMonitor<>` services.
+The options binding system in .NET Core supports hot reload of configuration data which is implemented by some configuration providers like the providers for json and ini files. This is typically done by watching the configuration source for changes and then reloading the configuration data. This is useful for scenarios where configuration data is stored in a file and the application needs to react to changes in the file without needing to restart the application. This support is provided by the `IOptionsSnapshot<>` and `IOptionsMonitor<>` services.
 
 One of the benefits of this package is that it supports hot reloading of injected raw configuration services by default. A raw type is a configuration class and its defined interfaces that are found under the root configuration type. In this definition, a raw type is anything other than `IOption<>`, `IOptionsSnapshot<>` or `IOptionsMonitor<>`. 
 
-In the above configuration example, the raw types are:
-- IRootConfig
-- RootConfig
+In the above configuration example, the raw types that support hot reloading are:
 - IFirstConfig
 - FirstConfig
 - ISecondConfig
@@ -132,9 +130,9 @@ In the above configuration example, the raw types are:
 - IThirdConfig
 - ThirdConfig
 
-This package detects when a configuration change has occurred by watching `IOptionsMonitor<>.OnChange` on all configuration services registered under the root configuration type. The package then updates the existing raw type in memory which works because the raw types are registered as singleton services. This allows the application class to receive updated configuration data at runtime without needing to use `IOptionsMonitor<T>` but injecting the raw configuration type instead. Logging is provided as the mechanism for recording that an injected raw type has been updated.
+This package detects when a configuration change has occurred by watching `IOptionsMonitor<>.OnChange` on all configuration services registered under the root configuration type. The package then updates the existing raw type in memory which works because the raw types are registered as singleton services. This allows the application class to receive updated configuration data at runtime by injecting a `T` configuration class/interface without needing to use `IOptionsMonitor<T>` or `IOptionsSnapshot<T>`. Logging is provided as the mechanism for recording that an injected raw type has been updated.
 
-The main reason to use `IOptionsMonitor<>` instead of the raw type is when the application class wants to hook into the `IOptionsMonitor.OnChange` method itself to run some custom code when the configuration changes.
+The reason to use `IOptionsMonitor<>` instead of the raw type is when the application class wants to hook into the `IOptionsMonitor.OnChange` method itself to run some custom code when the configuration changes.
 
 The hot reload support for raw configuration types can be disabled by setting the `ReloadInjectedRawTypes` option to `false` in the `ConfigureWith<T>` overload.
 
@@ -165,12 +163,12 @@ var builder = Host.CreateDefaultBuilder()
 # Recommendations
 
 ## Use read-only interface definitions for configuration types
-Configuration class definitions require that properties are mutable to allow the configuration system to set the values. There is a risk of an application class mutating the configuration data after it is injected into a class constructor. The way to prevent unintended mutation of configuration data at runtime is to define read-only interfaces for the configuration types. This will allow the configuration system to set the values but the application code will not be able to change the values.
+Configuration class definitions require that properties are mutable to allow the configuration binding system to set the values. There is a risk of an application class mutating the configuration data after it is injected into a class constructor. The way to prevent unintended mutation of configuration data at runtime is to define a read-only interface for the configuration class. This will allow the configuration system to set the values but the application code will not be able to change the values.
 
-The `ConfigureWith<T>` extension method supports this by registering any configuration interfaces found under the root configuration type.
+The `ConfigureWith<T>` extension method supports this by registering any configuration interfaces found under the root configuration class.
 
 ## Properties for child configuration types should be classes
-Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces. The `ConfigureWith<T>` extension method uses reflection to walk the type hierarchy from the root configuration type by finding and recursing through all the properties.
+Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method uses reflection to walk the type hierarchy from the root configuration type by finding and recursing through all the properties.
 
 For example, if the `First` property on `RootConfig` above was defined as `IFirstConfig` rather than `FirstConfig` then the `Second` property on `FirstConfig` would not be found and registered as a service. This is because the `IFirstConfig` does not define the `Second` property but `FirstConfig` does.
 

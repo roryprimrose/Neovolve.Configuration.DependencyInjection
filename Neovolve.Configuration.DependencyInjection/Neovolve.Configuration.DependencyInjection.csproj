@@ -11,7 +11,7 @@
 		<Title>Configuration binding dependency injection support with hot reload</Title>
 		<Authors>Rory Primrose</Authors>
 		<Company>Neovolve</Company>
-		<Description>This library contains IHostBuilder extension methods to register configuration types with hot reload.</Description>
+		<Description>This library provides IHostBuilder extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.</Description>
 		<Copyright>Copyright © Neovolve 2023</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</PackageProjectUrl>
@@ -27,7 +27,6 @@
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="7.0.0" />

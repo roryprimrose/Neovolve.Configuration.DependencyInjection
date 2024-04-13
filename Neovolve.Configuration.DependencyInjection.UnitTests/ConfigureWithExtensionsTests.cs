@@ -93,7 +93,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithOptionsThrowsExceptionWithNullBuilder()
     {
-        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, x => { });
+        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, _ => { });
 
         action.Should().Throw<ArgumentNullException>();
     }

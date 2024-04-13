@@ -4,8 +4,6 @@ using Microsoft.Extensions.Options;
 
 public class WrapperSnapshot<T> : IOptionsSnapshot<T> where T : class
 {
-    private Action<T, string?> _listener;
-
     public WrapperSnapshot(T config)
     {
         Value = config;

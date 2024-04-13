@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 public class WrapperMonitor<T> : IOptionsMonitor<T>
 {
-    private Action<T, string?> _listener;
+    private Action<T, string?>? _listener;
 
     public WrapperMonitor(T config)
     {
