@@ -21,5 +21,5 @@ public class CustomWebApplicationFactory<TProgram>
         return host;
     }
 
-    public string ConfigPath { get; set; }
+    public string ConfigPath { get; set; } = string.Empty;
 }

@@ -2,11 +2,11 @@
 
 using Microsoft.Extensions.Options;
 
-internal class SnapshotInterfaceService : ConsoleUpdateService
+internal class OptionsConcreteService : ConsoleUpdateService
 {
-    private readonly IOptionsSnapshot<IThirdConfig> _config;
+    private readonly IOptions<ThirdConfig> _config;
 
-    public SnapshotInterfaceService(IOptionsSnapshot<IThirdConfig> config)
+    public OptionsConcreteService(IOptions<ThirdConfig> config)
     {
         _config = config;
     }

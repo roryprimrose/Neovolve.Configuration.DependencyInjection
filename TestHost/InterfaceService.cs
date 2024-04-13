@@ -2,15 +2,15 @@
 
 internal class InterfaceService : ConsoleUpdateService
 {
-    private readonly ISecondConfig _config;
+    private readonly IThirdConfig _config;
 
-    public InterfaceService(ISecondConfig config)
+    public InterfaceService(IThirdConfig config)
     {
         _config = config;
     }
 
     protected override Task DoWork(CancellationToken cancellationToken)
     {
-        return WriteValue(_config.SecondValue);
+        return WriteValue(_config.ThirdValue + " with timeout " + _config.Timeout);
     }
 }

@@ -14,13 +14,15 @@ internal class Program
                 {
                     services.AddHostedService<RootConcreteService>();
                     services.AddHostedService<RootInterfaceService>();
-
-                    //services.AddHostedService<MonitorConcreteService>();
-                    //services.AddHostedService<MonitorInterfaceService>();
-                    //services.AddHostedService<SnapshotConcreteService>();
-                    //services.AddHostedService<SnapshotInterfaceService>();
+                    
                     services.AddHostedService<ConcreteService>();
                     services.AddHostedService<InterfaceService>();
+                    services.AddHostedService<OptionsConcreteService>();
+                    services.AddHostedService<OptionsInterfaceService>();
+                    services.AddHostedService<SnapshotConcreteService>();
+                    services.AddHostedService<SnapshotInterfaceService>();
+                    services.AddHostedService<MonitorConcreteService>();
+                    services.AddHostedService<MonitorInterfaceService>();
                 });
 
         await builder.RunConsoleAsync().ConfigureAwait(false);

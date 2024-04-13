@@ -2,42 +2,40 @@
 
 internal interface IConfig
 {
-    FirstConfig First { get; set; }
-
     string RootValue { get; set; }
 }
 
 internal class Config : IConfig
 {
-    public FirstConfig First { get; set; }
+    public FirstConfig First { get; } = new();
 
-    public string RootValue { get; set; }
+    public string RootValue { get; set; } = string.Empty;
 }
 
 internal interface IFirstConfig
 {
     string FirstValue { get; }
-    SecondConfig Second { get; }
+
+    Guid Id { get; }
 }
 
 internal class FirstConfig : IFirstConfig
 {
-    public string FirstValue { get; set; }
-
-    public SecondConfig Second { get; set; }
+    public string FirstValue { get; set; } = string.Empty;
+    public Guid Id { get; set; }
+    public SecondConfig Second { get; } = new();
 }
 
 internal interface ISecondConfig
 {
     string SecondValue { get; }
-    ThirdConfig Third { get; }
 }
 
 internal class SecondConfig : ISecondConfig
 {
-    public string SecondValue { get; set; }
+    public string SecondValue { get; set; } = string.Empty;
 
-    public ThirdConfig Third { get; set; }
+    public ThirdConfig Third { get; } = new();
 }
 
 internal interface IThirdConfig
@@ -47,5 +45,5 @@ internal interface IThirdConfig
 
 internal class ThirdConfig : IThirdConfig
 {
-    public string ThirdValue { get; set; }
+    public string ThirdValue { get; set; } = string.Empty;
 }
