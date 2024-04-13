@@ -9,7 +9,7 @@
     public class ConfigureWithOptions : IConfigureWithOptions
     {
         /// <inheritdoc />
-        public string CustomLogCategory { get; set; } = string.Empty;
+        public string CustomLogCategory { get; set; } = "Neovolve.Configuration.DependencyInjection.ConfigureWith";
 
         /// <inheritdoc />
         public LogCategoryType LogCategoryType { get; set; } = LogCategoryType.TargetType;
