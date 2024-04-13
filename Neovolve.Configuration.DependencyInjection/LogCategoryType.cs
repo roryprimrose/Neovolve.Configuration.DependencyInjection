@@ -13,11 +13,6 @@ public enum LogCategoryType
     TargetType,
 
     /// <summary>
-    /// Log messages are written to a category of this library.
-    /// </summary>
-    LibraryType,
-
-    /// <summary>
     /// Log messages are written to a category defined by <see cref="ConfigureWithOptions.CustomLogCategory"/>.
     /// </summary>
     Custom

@@ -83,8 +83,7 @@
 
         [Theory]
         [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.FirstConfig")]
-        [InlineData(LogCategoryType.LibraryType, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
-        [InlineData(LogCategoryType.Custom, "A436F5013F574906BAE263824DEFA140")]
+        [InlineData(LogCategoryType.Custom, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
         public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
             string expectedCategory)
         {
