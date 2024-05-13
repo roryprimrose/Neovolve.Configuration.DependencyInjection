@@ -6,17 +6,17 @@ using Microsoft.AspNetCore.Mvc;
 [Route("[controller]")]
 public class ConfigConcreteController : ControllerBase
 {
-    private readonly IConfig _config;
+    private readonly IConfig _rootConfig;
 
-    public ConfigConcreteController(Config config)
+    public ConfigConcreteController(RootConfig rootConfig)
     {
-        _config = config;
+        _rootConfig = rootConfig;
     }
 
     [HttpGet]
     public IConfig Get()
     {
-        return _config;
+        return _rootConfig;
     }
 }
 

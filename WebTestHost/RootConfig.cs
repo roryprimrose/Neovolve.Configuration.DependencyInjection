@@ -5,7 +5,7 @@ public interface IConfig
     string RootValue { get; }
 }
 
-public class Config : IConfig
+public class RootConfig : IConfig
 {
     public FirstConfig First { get; set; } = new();
 

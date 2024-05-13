@@ -13,7 +13,7 @@ public sealed class InjectionTests
 {
     private readonly CustomWebApplicationFactory<Program> _factory;
     private readonly ITestOutputHelper _output;
-    private Config? _originalConfig;
+    private RootConfig? _originalConfig;
 
     private string? _originalData;
 
@@ -76,7 +76,7 @@ public sealed class InjectionTests
 
         var expected = await GetConfig();
 
-        var actual = await GetData<Config>(client, url);
+        var actual = await GetData<RootConfig>(client, url);
 
         actual.Should().BeEquivalentTo(expected);
     }
@@ -184,7 +184,7 @@ public sealed class InjectionTests
 
             await UpdateConfig();
 
-            var secondActual = await GetData<Config>(client, url);
+            var secondActual = await GetData<RootConfig>(client, url);
 
             secondActual.Should().BeEquivalentTo(firstExpected);
         }
@@ -356,13 +356,13 @@ public sealed class InjectionTests
         }
     }
 
-    private async Task<Config> GetConfig()
+    private async Task<RootConfig> GetConfig()
     {
         var data = await File.ReadAllTextAsync(_factory.ConfigPath).ConfigureAwait(false);
 
         _output.WriteLine("Disk config: " + data);
 
-        var config = JsonConvert.DeserializeObject<Config>(data)!;
+        var config = JsonConvert.DeserializeObject<RootConfig>(data)!;
 
         if (_originalData == null)
         {
@@ -404,9 +404,9 @@ public sealed class InjectionTests
         }
     }
 
-    private async Task<Config> UpdateConfig()
+    private async Task<RootConfig> UpdateConfig()
     {
-        var newConfig = Model.Create<Config>();
+        var newConfig = Model.Create<RootConfig>();
 
         var data = JsonConvert.SerializeObject(newConfig);
 
