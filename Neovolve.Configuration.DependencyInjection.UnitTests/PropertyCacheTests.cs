@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
+    using System.Linq;
     using FluentAssertions;
 
     public class PropertyCacheTests

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
+using Neovolve.Configuration.DependencyInjection.Comparison;
 
 /// <summary>
 ///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
@@ -82,14 +83,14 @@ public static class ConfigureWithExtensions
 
         return builder.ConfigureServices((_, services) =>
             {
-                // Add the configuration registration
+                // Add the options registration
                 services.AddSingleton(c =>
                 {
                     var config = new ConfigureWithOptions();
 
                     var hostEnvironment = c.GetService<IHostEnvironment>();
 
-                    if (hostEnvironment != null 
+                    if (hostEnvironment != null
                         && hostEnvironment.IsDevelopment())
                     {
                         config.LogReadOnlyPropertyLevel = LogLevel.Warning;
@@ -104,9 +105,20 @@ public static class ConfigureWithExtensions
                     return config;
                 });
 
-                // Add a redirect from the configuration type to its interface
+                // Add a redirect from the options type to its interface
                 services.AddSingleton<IConfigureWithOptions>(provider =>
                     provider.GetRequiredService<ConfigureWithOptions>());
+
+                // Register the value evaluators
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator),
+                    ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(FallbackChangeEvaluator), ServiceLifetime.Singleton));
+
+                // Register the evaluator processor that uses all the evaluators
+                services.AddSingleton<IValueProcessor, ValueProcessor>();
 
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();

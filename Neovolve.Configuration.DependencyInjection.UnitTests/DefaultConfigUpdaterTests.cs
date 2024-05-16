@@ -2,6 +2,7 @@
 
 namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
+    using System;
     using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
@@ -76,35 +77,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Theory]
-        [InlineData(LogReadOnlyPropertyType.All, true)]
-        [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, false)]
-        [InlineData(LogReadOnlyPropertyType.None, false)]
-        public void UpdateConfigLogsChangesToReadOnlyReferenceTypeWhenEnabled(LogReadOnlyPropertyType option, bool logWritten)
-        {
-            var injectedConfig = Model.Create<ReadOnlyType<SimpleType>>();
-            var updatedConfig = Model.Create<ReadOnlyType<SimpleType>>();
-            var name = Guid.NewGuid().ToString();
-
-            Use(new ConfigureWithOptions
-            {
-                LogReadOnlyPropertyType = option
-            });
-
-            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
-
-            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
-
-            if (logWritten)
-            {
-                logger.Entries.Should().Contain(x => x.EventId.Id == 5003);
-            }
-            else
-            {
-                logger.Entries.Should().NotContain(x => x.EventId.Id == 5003);
-            }
-        }
-
-        [Theory]
         [InlineData(LogLevel.Critical)]
         [InlineData(LogLevel.Debug)]
         [InlineData(LogLevel.Error)]
@@ -128,6 +100,36 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
 
             logger.Entries.Should().Contain(x => x.EventId.Id == 5003 && x.LogLevel == logLevel);
+        }
+
+        [Theory]
+        [InlineData(LogReadOnlyPropertyType.All, true)]
+        [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, false)]
+        [InlineData(LogReadOnlyPropertyType.None, false)]
+        public void UpdateConfigLogsChangesToReadOnlyReferenceTypeWhenEnabled(LogReadOnlyPropertyType option,
+            bool logWritten)
+        {
+            var injectedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var updatedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogReadOnlyPropertyType = option
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            if (logWritten)
+            {
+                logger.Entries.Should().Contain(x => x.EventId.Id == 5003);
+            }
+            else
+            {
+                logger.Entries.Should().NotContain(x => x.EventId.Id == 5003);
+            }
         }
 
         [Theory]
@@ -163,7 +165,8 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         [InlineData(LogReadOnlyPropertyType.All, true)]
         [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, true)]
         [InlineData(LogReadOnlyPropertyType.None, false)]
-        public void UpdateConfigLogsChangesToReadOnlyValueTypeWhenEnabled(LogReadOnlyPropertyType option, bool logWritten)
+        public void UpdateConfigLogsChangesToReadOnlyValueTypeWhenEnabled(LogReadOnlyPropertyType option,
+            bool logWritten)
         {
             var injectedConfig = Model.Create<ReadOnlyType<int>>();
             var updatedConfig = Model.Create<ReadOnlyType<int>>();

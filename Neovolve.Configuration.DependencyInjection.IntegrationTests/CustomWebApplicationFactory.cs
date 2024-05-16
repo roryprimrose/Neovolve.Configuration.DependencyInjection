@@ -1,6 +1,10 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.IntegrationTests;
 
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 public class CustomWebApplicationFactory<TProgram>
     : WebApplicationFactory<TProgram> where TProgram : class

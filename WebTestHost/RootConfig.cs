@@ -45,9 +45,8 @@ public interface IThirdConfig
 
 public class ThirdConfig : IThirdConfig
 {
-    public int TimeoutInSeconds { get; set; } = 123;
+    public string ThirdValue { get; set; } = string.Empty;
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
-
-    public string ThirdValue { get; set; } = string.Empty;
+    public int TimeoutInSeconds { get; set; } = 123;
 }

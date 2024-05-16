@@ -1,5 +1,7 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests;
 
+using System;
+
 internal interface IConfig
 {
     string RootValue { get; set; }

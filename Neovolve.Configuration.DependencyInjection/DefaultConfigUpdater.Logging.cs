@@ -25,7 +25,7 @@ public partial class DefaultConfigUpdater
 
     [LoggerMessage(EventId = 5001, EventName = CopyValuesEventName, Level = LogLevel.Debug,
         Message =
-            "Configuration updated on property {targetType}.{property} from '{oldValue}' to '{newValue}'")]
-    static partial void LogConfigPropertyChanged(ILogger logger, Type targetType, string property, object? oldValue,
+            "Configuration updated on property {targetType}.{propertyPath} from '{oldValue}' to '{newValue}'")]
+    static partial void LogConfigPropertyChanged(ILogger logger, Type targetType, string propertyPath, object? oldValue,
         object? newValue);
 }

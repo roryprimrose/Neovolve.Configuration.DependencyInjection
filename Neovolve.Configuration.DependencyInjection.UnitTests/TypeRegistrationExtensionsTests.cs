@@ -1,5 +1,8 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
     using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;

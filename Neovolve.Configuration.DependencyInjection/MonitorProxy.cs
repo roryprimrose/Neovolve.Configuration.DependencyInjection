@@ -26,7 +26,7 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
         var disposable = new ConfigurationChangeTracker(this, listener);
 
         ConfigChanged += disposable.ConfigChanged;
-        
+
         return disposable;
     }
 
@@ -44,8 +44,8 @@ internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>
             _monitor = monitor;
         }
 
-        public void Dispose() => _monitor.ConfigChanged -= ConfigChanged;
-
         public void ConfigChanged(TInterface options, string? name) => _listener.Invoke(options, name);
+
+        public void Dispose() => _monitor.ConfigChanged -= ConfigChanged;
     }
 }

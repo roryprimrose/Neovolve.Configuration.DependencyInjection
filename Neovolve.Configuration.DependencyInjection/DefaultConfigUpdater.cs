@@ -1,6 +1,7 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
 using System;
+using System.Collections;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 
@@ -76,6 +77,12 @@ public partial class DefaultConfigUpdater : IConfigUpdater
     /// </remarks>
     protected virtual bool IsMatchingValue(object? oldValue, object? updatedValue)
     {
+        if (BothValuesNull(oldValue, updatedValue))
+        {
+            // There is no change
+            return true;
+        }
+
         if (oldValue == null)
         {
             return false;
@@ -86,6 +93,22 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             return false;
         }
 
+        // If the type is IDictionary then we can check if the count has changed or if any of the items have changed
+        // This needs to be checked before ICollection below because IDictionary implements ICollection but is more specific
+        if (oldValue is IDictionary oldDictionary
+            && updatedValue is IDictionary updatedDictionary)
+        {
+            return IsMatchingDictionary(oldDictionary, updatedDictionary);
+        }
+
+        // If the type is ICollection then we can check if the count has changed or if any of the items have changed
+        if (oldValue is ICollection oldCollection
+            && updatedValue is ICollection updatedCollection)
+        {
+            return IsMatchingCollection(oldCollection, updatedCollection);
+        }
+
+        // Any other scenario we can only rely on Equals
         if (oldValue.Equals(updatedValue))
         {
             return true;
@@ -147,12 +170,6 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             var oldValue = property.GetValue(injectedConfig);
             var updatedValue = property.GetValue(updatedConfig, null);
 
-            if (BothValuesNull(oldValue, updatedValue))
-            {
-                // There is no change
-                return false;
-            }
-
             if (IsMatchingValue(oldValue, updatedValue))
             {
                 // Both values exist but they are the same
@@ -163,7 +180,7 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
             if (logger != null)
             {
-                LogConfigPropertyChanged(logger, targetType, property.Name, oldValue, updatedValue);
+                LogPropertyChanged<T>(property, logger, targetType, oldValue, updatedValue);
             }
 
             return true;
@@ -192,6 +209,77 @@ public partial class DefaultConfigUpdater : IConfigUpdater
         if (updatedValue != null)
         {
             return false;
+        }
+
+        return true;
+    }
+
+    private static void LogPropertyChanged<T>(PropertyInfo property, ILogger logger, Type targetType, object oldValue,
+        object updatedValue)
+    {
+        // Attempt to identify whether there is a friendly log message to be written
+        // Most types (like value types) will work fine with ToString
+        // Types like anything ICollection will not however
+        // In these cases we can do a simple log like entries have been added or removed
+        LogConfigPropertyChanged(logger, targetType, property.Name, oldValue, updatedValue);
+    }
+
+    private bool IsMatchingCollection(ICollection oldCollection, ICollection updatedCollection)
+    {
+        if (oldCollection.Count != updatedCollection.Count)
+        {
+            return false;
+        }
+
+        // We have the same number of items in the collection
+        // We need to check if any of the items have changed
+        var oldEnumerator = oldCollection.GetEnumerator();
+        var updatedEnumerator = updatedCollection.GetEnumerator();
+
+        while (oldEnumerator.MoveNext()
+               && updatedEnumerator.MoveNext())
+        {
+            if (IsMatchingValue(oldEnumerator.Current, updatedEnumerator.Current) == false)
+            {
+                return false;
+            }
+        }
+
+        if (oldEnumerator is IDisposable oldDisposable)
+        {
+            oldDisposable.Dispose();
+        }
+
+        if (updatedEnumerator is IDisposable updatedDisposable)
+        {
+            updatedDisposable.Dispose();
+        }
+
+        return true;
+    }
+
+    private bool IsMatchingDictionary(IDictionary oldDictionary, IDictionary updatedDictionary)
+    {
+        if (oldDictionary.Count != updatedDictionary.Count)
+        {
+            return false;
+        }
+
+        // We have the same number of items in the dictionary
+        // We need to check if any of the items have changed
+        foreach (DictionaryEntry oldEntry in oldDictionary)
+        {
+            if (updatedDictionary.Contains(oldEntry.Key) == false)
+            {
+                return false;
+            }
+
+            var updatedEntry = updatedDictionary[oldEntry.Key];
+
+            if (IsMatchingValue(oldEntry.Value, updatedEntry) == false)
+            {
+                return false;
+            }
         }
 
         return true;

@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
+    using System;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -94,7 +95,7 @@
             var name = Guid.NewGuid().ToString();
 
             var section = Substitute.For<IConfigurationSection>();
-            
+
             services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
             services.RegisterConfigType<SimpleType>(section);
@@ -136,7 +137,7 @@
 
             secondActual.Should().BeSameAs(firstActual);
         }
-        
+
         [Fact]
         public void RegisterConfigTypeUpdatesExistingConfigurationObjectWhenReloadIsTrue()
         {
@@ -151,7 +152,7 @@
             var name = Guid.NewGuid().ToString();
 
             var section = Substitute.For<IConfigurationSection>();
-            
+
             services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
             services.AddTransient<IConfigUpdater, DefaultConfigUpdater>();
