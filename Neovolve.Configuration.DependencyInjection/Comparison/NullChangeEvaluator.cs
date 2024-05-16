@@ -5,8 +5,9 @@ using System.Collections.Generic;
 
 internal class NullChangeEvaluator : InternalChangeEvaluator
 {
-    public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue, object? newValue,
-        NextFindChanges next)
+    public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue,
+        object? newValue,
+        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next)
     {
         if (originalValue == null
             && newValue == null)

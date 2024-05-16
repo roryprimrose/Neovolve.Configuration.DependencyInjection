@@ -26,7 +26,7 @@ internal class ValueProcessor : IValueProcessor
         // At any point in the pipeline an evaluator can handle the request and return a definitive result which will short circuit the remainder of the pipeline
 
         // The final evaluator is a dummy evaluator that just returns that the values are equal as there has been nothing up to this point to say otherwise
-        NextFindChanges finalEvaluator = (_, _, _) => Array.Empty<IdentifiedChange>();
+        Func<string, object?, object?, IEnumerable<IdentifiedChange>> finalEvaluator = (_, _, _) => Array.Empty<IdentifiedChange>();
 
         // If there is only one evaluator then just use that evaluator to determine if the values are equal
         if (_evaluators.Count == 1)
@@ -50,7 +50,7 @@ internal class ValueProcessor : IValueProcessor
             var evaluator = _evaluators[index];
 
             // Create a new function that will call the current evaluator with the next function in the pipeline
-            NextFindChanges currentFunc = (x, y, z) => evaluator.FindChanges(propertyPath, y, z, nextFunc);
+            Func<string, object?, object?, IEnumerable<IdentifiedChange>> currentFunc = (x, y, z) => evaluator.FindChanges(propertyPath, y, z, nextFunc);
 
             // Set the current function as the next function for the next iteration
             next = currentFunc;
@@ -63,7 +63,7 @@ internal class ValueProcessor : IValueProcessor
     private IEnumerable<IChangeEvaluator>? SortEvaluators(IEnumerable<IChangeEvaluator> evaluators)
     {
         var allEvaluators = evaluators.ToList();
-        var fallbackEvaluators = allEvaluators.OfType<FallbackChangeEvaluator>().OrderBy(x => x.Order).ToList();
+        var fallbackEvaluators = allEvaluators.OfType<EqualsChangeEvaluator>().OrderBy(x => x.Order).ToList();
         var internalEvaluators = allEvaluators.OfType<InternalChangeEvaluator>().Except(fallbackEvaluators)
             .OrderBy(x => x.Order).ToList();
         var externalEvaluators = allEvaluators.Except(internalEvaluators);
