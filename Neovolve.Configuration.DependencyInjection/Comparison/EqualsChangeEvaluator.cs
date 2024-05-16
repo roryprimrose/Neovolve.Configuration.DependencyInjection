@@ -8,7 +8,7 @@ internal class EqualsChangeEvaluator : InternalChangeEvaluator
 {
     public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue,
         object? newValue,
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next)
+        NextFindChanges next)
     {
         Debug.Assert(originalValue != null,
             "first should never be null because other internal evaluators should have returned a result before this is executed");

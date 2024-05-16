@@ -4,21 +4,11 @@
     using System.Collections.Generic;
     using System.Linq;
     using FluentAssertions;
-    using Microsoft.Extensions.DependencyInjection;
-    using Microsoft.Extensions.DependencyInjection.Extensions;
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using NSubstitute;
-    using Xunit.Abstractions;
 
     public class ValueProcessorTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public ValueProcessorTests(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
         [Fact]
         public void FindChangesReturnsFindChangesWhenNoEvaluatorReturnsDefinitiveResult()
         {
@@ -31,24 +21,24 @@
             var thirdEvaluator = Substitute.For<IChangeEvaluator>();
 
             firstEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
+                var next = x.Arg<NextFindChanges>();
 
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             secondEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             thirdEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
 
@@ -59,11 +49,11 @@
 
             actual.Should().BeEmpty();
             firstEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             secondEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             thirdEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
         }
 
         [Fact]
@@ -105,28 +95,28 @@
             var lastEvaluator = Substitute.For<IChangeEvaluator>();
 
             firstEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             secondEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             thirdEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             lastEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(result);
+                Arg.Any<NextFindChanges>()).Returns(result);
 
             var sut = new ValueProcessor(new List<IChangeEvaluator>
                 { firstEvaluator, secondEvaluator, thirdEvaluator, lastEvaluator });
@@ -137,13 +127,13 @@
 
             actual.Should().BeEquivalentTo(result);
             firstEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             secondEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             thirdEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             lastEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
         }
 
         [Theory]
@@ -171,24 +161,24 @@
             var lastEvaluator = Substitute.For<IChangeEvaluator>();
 
             firstEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             secondEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                    Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>())
+                    Arg.Any<NextFindChanges>())
                 .Returns(_ => result);
             thirdEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
-                var next = x.Arg<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>();
-                
+                var next = x.Arg<NextFindChanges>();
+
                 return next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
             });
             lastEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(result);
+                Arg.Any<NextFindChanges>()).Returns(result);
 
             var sut = new ValueProcessor(new List<IChangeEvaluator>
                 { firstEvaluator, secondEvaluator, thirdEvaluator, lastEvaluator });
@@ -197,13 +187,13 @@
 
             actual.Should().BeEquivalentTo(result);
             firstEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             secondEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             thirdEvaluator.DidNotReceive().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
             lastEvaluator.DidNotReceive().FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>());
+                Arg.Any<NextFindChanges>());
         }
 
         [Theory]
@@ -228,7 +218,7 @@
             var evaluator = Substitute.For<IChangeEvaluator>();
 
             evaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<Func<string, object?, object?, IEnumerable<IdentifiedChange>>>()).Returns(result);
+                Arg.Any<NextFindChanges>()).Returns(result);
 
             var sut = new ValueProcessor(new List<IChangeEvaluator> { evaluator });
 
@@ -240,7 +230,67 @@
         [Fact]
         public void FindChangesReturnsResultsFromMultipleEvaluators()
         {
-            throw new NotImplementedException();
+            var propertyPath = Guid.NewGuid().ToString();
+            var originalValue = "someValue";
+            var newValue = "someValue";
+            var firstResult = new IdentifiedChange(propertyPath, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+            var secondResult = new IdentifiedChange(propertyPath, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+            var thirdResult = new IdentifiedChange(propertyPath, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+
+            var firstEvaluator = Substitute.For<IChangeEvaluator>();
+            var secondEvaluator = Substitute.For<IChangeEvaluator>();
+            var thirdEvaluator = Substitute.For<IChangeEvaluator>();
+
+            firstEvaluator.FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>()).Returns<IEnumerable<IdentifiedChange>>(x =>
+            {
+                var next = x.Arg<NextFindChanges>();
+
+                var nextResults = next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
+                var data = new List<IdentifiedChange> { firstResult };
+                data.AddRange(nextResults);
+
+                return data;
+            });
+            secondEvaluator.FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>()).Returns(x =>
+            {
+                var next = x.Arg<NextFindChanges>();
+
+                var nextResults = next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
+                var data = new List<IdentifiedChange> { secondResult };
+                data.AddRange(nextResults);
+
+                return data;
+            });
+            thirdEvaluator.FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>()).Returns(x =>
+            {
+                var next = x.Arg<NextFindChanges>();
+
+                var nextResults = next(x.ArgAt<string>(0), x.ArgAt<object?>(1), x.ArgAt<object?>(2));
+                var data = new List<IdentifiedChange> { thirdResult };
+                data.AddRange(nextResults);
+
+                return data;
+            });
+
+            var sut = new ValueProcessor(new List<IChangeEvaluator>
+                { firstEvaluator, secondEvaluator, thirdEvaluator });
+
+            var actual = sut.FindChanges(propertyPath, originalValue, newValue).ToList();
+
+            actual.Should().HaveCount(3);
+            actual.Should().Contain(firstResult);
+            actual.Should().Contain(secondResult);
+            actual.Should().Contain(thirdResult);
+
+            firstEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>());
+            secondEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>());
+            thirdEvaluator.Received().FindChanges(propertyPath, originalValue, newValue,
+                Arg.Any<NextFindChanges>());
         }
     }
 }

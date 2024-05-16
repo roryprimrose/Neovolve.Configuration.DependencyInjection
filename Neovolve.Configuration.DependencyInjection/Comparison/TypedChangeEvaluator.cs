@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 
@@ -13,7 +12,7 @@ public abstract class TypedChangeEvaluator<T> : IChangeEvaluator
 {
     /// <inheritdoc />
     public IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue, object? newValue,
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next)
+        NextFindChanges next)
     {
         Debug.Assert(originalValue != null);
         Debug.Assert(newValue != null);
@@ -40,5 +39,5 @@ public abstract class TypedChangeEvaluator<T> : IChangeEvaluator
     ///     such a MyProperty[Key] or MyProperty[0].
     /// </remarks>
     protected abstract IEnumerable<IdentifiedChange> FindChanges(string propertyPath, T originalValue, T newValue,
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next);
+        NextFindChanges next);
 }

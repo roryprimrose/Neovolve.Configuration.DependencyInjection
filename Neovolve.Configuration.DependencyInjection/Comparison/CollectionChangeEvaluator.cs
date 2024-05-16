@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -9,7 +8,7 @@ internal class CollectionChangeEvaluator : InternalTypedChangeEvaluator<ICollect
 {
     protected override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, ICollection originalValue,
         ICollection newValue,
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next)
+        NextFindChanges next)
     {
         if (originalValue.Count != newValue.Count)
         {

@@ -26,7 +26,7 @@ internal class ValueProcessor : IValueProcessor
         // At any point in the pipeline an evaluator can handle the request and return a definitive result which will short circuit the remainder of the pipeline
 
         // The final evaluator is a dummy evaluator that just returns that the values are equal as there has been nothing up to this point to say otherwise
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> finalEvaluator = (_, _, _) => Array.Empty<IdentifiedChange>();
+        NextFindChanges finalEvaluator = (_, _, _) => Array.Empty<IdentifiedChange>();
 
         // If there is only one evaluator then just use that evaluator to determine if the values are equal
         if (_evaluators.Count == 1)
@@ -50,7 +50,7 @@ internal class ValueProcessor : IValueProcessor
             var evaluator = _evaluators[index];
 
             // Create a new function that will call the current evaluator with the next function in the pipeline
-            Func<string, object?, object?, IEnumerable<IdentifiedChange>> currentFunc = (x, y, z) => evaluator.FindChanges(propertyPath, y, z, nextFunc);
+            NextFindChanges currentFunc = (x, y, z) => evaluator.FindChanges(propertyPath, y, z, nextFunc);
 
             // Set the current function as the next function for the next iteration
             next = currentFunc;

@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison
 {
-    using System;
     using System.Collections.Generic;
 
     /// <summary>
@@ -22,6 +21,6 @@
         ///     such a MyProperty[Key] or MyProperty[0].
         /// </remarks>
         IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue, object? newValue,
-            Func<string, object?, object?, IEnumerable<IdentifiedChange>> next);
+            NextFindChanges next);
     }
 }

@@ -110,11 +110,16 @@ public static class ConfigureWithExtensions
                     provider.GetRequiredService<ConfigureWithOptions>());
 
                 // Register the value evaluators
-                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator), ServiceLifetime.Singleton));
-                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
-                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
-                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
-                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator),
+                    ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator),
+                    ServiceLifetime.Singleton));
 
                 // Register the evaluator processor that uses all the evaluators
                 services.AddSingleton<IValueProcessor, ValueProcessor>();

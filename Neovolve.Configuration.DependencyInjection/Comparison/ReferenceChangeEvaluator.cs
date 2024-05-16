@@ -7,7 +7,7 @@ internal class ReferenceChangeEvaluator : InternalChangeEvaluator
 {
     public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue,
         object? newValue,
-        Func<string, object?, object?, IEnumerable<IdentifiedChange>> next)
+        NextFindChanges next)
     {
         if (ReferenceEquals(originalValue, newValue))
         {
