@@ -35,6 +35,9 @@
 
 	<ItemGroup>
 		<InternalsVisibleTo Include="Neovolve.Configuration.DependencyInjection.UnitTests" />
+
+		<!-- This is used to allow mocking libraries to access internal types -->
+		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
 	</ItemGroup>
 
 </Project>

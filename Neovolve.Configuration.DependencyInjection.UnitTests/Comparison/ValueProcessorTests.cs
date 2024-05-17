@@ -4,11 +4,75 @@
     using System.Collections.Generic;
     using System.Linq;
     using FluentAssertions;
+    using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using NSubstitute;
 
     public class ValueProcessorTests
     {
+        [Fact]
+        public void FindChangesExecutesInternalAndExternalEvaluatorsInOrder()
+        {
+            var results = Model.Create<List<IdentifiedChange>>();
+            var propertyPath = Guid.NewGuid().ToString();
+            var originalValue = "someValue";
+            var newValue = "someValue";
+
+            var internalEvaluator1 = Substitute.For<IInternalChangeEvaluator>();
+            var internalEvaluator2 = Substitute.For<IInternalChangeEvaluator>();
+            var externalEvaluator1 = Substitute.For<IChangeEvaluator>();
+            var externalEvaluator2 = Substitute.For<IChangeEvaluator>();
+            var internalFinalEvaluator1 = Substitute.For<IInternalChangeEvaluator>();
+            var internalFinalEvaluator2 = Substitute.For<IInternalChangeEvaluator>();
+
+            internalEvaluator1.Order.Returns(0);
+            internalEvaluator1.IsFinalEvaluator.Returns(false);
+            internalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(x => x.Arg<NextFindChanges>()(propertyPath, originalValue, newValue));
+            internalEvaluator2.Order.Returns(1);
+            internalEvaluator2.IsFinalEvaluator.Returns(false);
+            internalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(x => x.Arg<NextFindChanges>()(propertyPath, originalValue, newValue));
+            externalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(x => x.Arg<NextFindChanges>()(propertyPath, originalValue, newValue));
+            externalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(x => x.Arg<NextFindChanges>()(propertyPath, originalValue, newValue));
+            internalFinalEvaluator1.Order.Returns(0);
+            internalFinalEvaluator1.IsFinalEvaluator.Returns(true);
+            internalFinalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(x => x.Arg<NextFindChanges>()(propertyPath, originalValue, newValue));
+            internalFinalEvaluator2.Order.Returns(1);
+            internalFinalEvaluator2.IsFinalEvaluator.Returns(true);
+            internalFinalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>())
+                .Returns(results);
+
+            var evaluators = new List<IChangeEvaluator>
+            {
+                internalFinalEvaluator2,
+                externalEvaluator1,
+                internalFinalEvaluator1,
+                internalEvaluator2,
+                internalEvaluator1,
+                externalEvaluator2
+            };
+
+            var sut = new ValueProcessor(evaluators);
+
+            var actual = sut.FindChanges(propertyPath, originalValue, newValue).ToList();
+
+            actual.Should().BeEquivalentTo(results);
+
+            Received.InOrder(() =>
+            {
+                internalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+                internalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+                externalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+                externalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+                internalFinalEvaluator1.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+                internalFinalEvaluator2.FindChanges(propertyPath, originalValue, newValue, Arg.Any<NextFindChanges>());
+            });
+        }
+
         [Fact]
         public void FindChangesReturnsFindChangesWhenNoEvaluatorReturnsDefinitiveResult()
         {
