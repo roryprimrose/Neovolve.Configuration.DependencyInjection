@@ -1,4 +1,4 @@
-﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
+﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
     using System;
     using System.Collections.Generic;
@@ -242,7 +242,7 @@
             var thirdEvaluator = Substitute.For<IChangeEvaluator>();
 
             firstEvaluator.FindChanges(propertyPath, originalValue, newValue,
-                Arg.Any<NextFindChanges>()).Returns<IEnumerable<IdentifiedChange>>(x =>
+                Arg.Any<NextFindChanges>()).Returns(x =>
             {
                 var next = x.Arg<NextFindChanges>();
 

@@ -34,6 +34,22 @@ public class IdentifiedChange
     /// <param name="propertyPath">The property path that identifies the property being changed.</param>
     /// <param name="firstLogValue">The log value that represents the first value.</param>
     /// <param name="secondLogValue">The log value that represents the second value.</param>
+    /// <returns>The comparison result.</returns>
+    /// <remarks>
+    ///     The <paramref name="propertyPath" /> value may be just the name of a property, or it may identify a sub value
+    ///     such a MyProperty[Key] or MyProperty[0].
+    /// </remarks>
+    public IdentifiedChange(string propertyPath, string firstLogValue, string secondLogValue) : this(propertyPath,
+        firstLogValue, secondLogValue, DefaultMessageFormat)
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="IdentifiedChange" /> class.
+    /// </summary>
+    /// <param name="propertyPath">The property path that identifies the property being changed.</param>
+    /// <param name="firstLogValue">The log value that represents the first value.</param>
+    /// <param name="secondLogValue">The log value that represents the second value.</param>
     /// <param name="messageFormat">The format of the log message that records the change in value.</param>
     /// <returns>The comparison result.</returns>
     /// <exception cref="ArgumentNullException">The <paramref name="messageFormat" /> is <c>null</c>.</exception>

@@ -1,7 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
 using System.Collections.Generic;
-using System.Diagnostics;
 
 /// <summary>
 ///     The <see cref="TypedChangeEvaluator{T}" />
@@ -14,9 +13,6 @@ public abstract class TypedChangeEvaluator<T> : IChangeEvaluator
     public IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue, object? newValue,
         NextFindChanges next)
     {
-        Debug.Assert(originalValue != null);
-        Debug.Assert(newValue != null);
-
         if (originalValue is T originalTypedValue
             && newValue is T newTypedValue)
         {

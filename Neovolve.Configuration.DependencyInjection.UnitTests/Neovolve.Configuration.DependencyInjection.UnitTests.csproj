@@ -30,8 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference
-			Include="..\Neovolve.Configuration.DependencyInjection\Neovolve.Configuration.DependencyInjection.csproj" />
+		<ProjectReference Include="..\Neovolve.Configuration.DependencyInjection\Neovolve.Configuration.DependencyInjection.csproj" />
 	</ItemGroup>
 
 </Project>

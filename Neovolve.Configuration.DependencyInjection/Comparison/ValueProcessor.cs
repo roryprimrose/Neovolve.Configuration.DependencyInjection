@@ -63,10 +63,10 @@ internal class ValueProcessor : IValueProcessor
     private IEnumerable<IChangeEvaluator>? SortEvaluators(IEnumerable<IChangeEvaluator> evaluators)
     {
         var allEvaluators = evaluators.ToList();
-        var fallbackEvaluators = allEvaluators.OfType<EqualsChangeEvaluator>().OrderBy(x => x.Order).ToList();
-        var internalEvaluators = allEvaluators.OfType<InternalChangeEvaluator>().Except(fallbackEvaluators)
-            .OrderBy(x => x.Order).ToList();
-        var externalEvaluators = allEvaluators.Except(internalEvaluators);
+        var internalChangeEvaluators = allEvaluators.OfType<IInternalChangeEvaluator>().ToList();
+        var fallbackEvaluators = internalChangeEvaluators.Where(x => x.IsFinalEvaluator).OrderBy(x => x.Order).ToList();
+        var internalEvaluators = internalChangeEvaluators.Where(x => x.IsFinalEvaluator == false).OrderBy(x => x.Order).ToList();
+        var externalEvaluators = allEvaluators.Except(internalChangeEvaluators);
 
         // Ordering of evaluators will be internal evaluators sorted by Order, external evaluators, then fallback evaluators sorted by Order
         foreach (var evaluator in internalEvaluators)

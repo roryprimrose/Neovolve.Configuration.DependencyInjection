@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -25,7 +26,10 @@ internal class CollectionChangeEvaluator : InternalTypedChangeEvaluator<ICollect
 
         // Get a reference to the same values by index for each iteration through the loop
         var originalEnumerator = originalValue.GetEnumerator();
+        using var originalDisposable = originalEnumerator as IDisposable;
         var newEnumerator = newValue.GetEnumerator();
+        using var newDisposable = newEnumerator as IDisposable;
+        var index = 0;
 
         // At this point we have the same number of items in the dictionary and all the keys are the same
         // The next check is to see if the dictionary values are the same
@@ -35,9 +39,12 @@ internal class CollectionChangeEvaluator : InternalTypedChangeEvaluator<ICollect
             var firstValue = originalEnumerator.Current;
             var secondValue = newEnumerator.Current;
 
-            var entryResults = next(propertyPath, firstValue, secondValue);
+            var currentPath = $"{propertyPath}[{index}]";
+
+            var entryResults = next(currentPath, firstValue, secondValue);
 
             results.AddRange(entryResults);
+            index++;
         }
 
         return results;
