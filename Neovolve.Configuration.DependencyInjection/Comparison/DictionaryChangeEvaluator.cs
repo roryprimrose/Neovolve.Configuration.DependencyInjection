@@ -47,10 +47,12 @@ internal class DictionaryChangeEvaluator : InternalTypedChangeEvaluator<IDiction
         if (removedKeys.Count > 0
             || addedKeys.Count > 0)
         {
-            var removedMessage = BuildKeyMessage(removedKeys);
-            var addedMessage = BuildKeyMessage(addedKeys);
+            // Because of the initial check on the counts, if we have keys removed and added then those must both be greater than 0
+            var removedMessage = string.Join(", ", removedKeys);
+            var addedMessage = string.Join(", ", addedKeys);
+
             var result = new IdentifiedChange(propertyPath, removedMessage, addedMessage,
-                $"removed {IdentifiedChange.OldValueMask} keys and added {IdentifiedChange.NewValueMask} keys");
+                $"removed keys {IdentifiedChange.OldValueMask} and added keys {IdentifiedChange.NewValueMask}");
 
             return [result];
         }
@@ -64,22 +66,12 @@ internal class DictionaryChangeEvaluator : InternalTypedChangeEvaluator<IDiction
             var firstValue = firstEntry.Value;
             var secondValue = newValue[firstEntry.Key];
 
-            var entryResults = next(propertyPath, firstValue, secondValue);
+            var entryResults = next($"{propertyPath}[{firstEntry.Key}]", firstValue, secondValue);
 
             results.AddRange(entryResults);
         }
 
         return results;
-    }
-
-    private static string BuildKeyMessage(List<string> keys)
-    {
-        if (keys.Count > 0)
-        {
-            return string.Join(", ", keys);
-        }
-
-        return "no";
     }
 
     private static List<string>? KeysAsStrings(IDictionary dictionary)
@@ -99,37 +91,24 @@ internal class DictionaryChangeEvaluator : InternalTypedChangeEvaluator<IDiction
             if (key is string keyAsString)
             {
                 convertedKeys.Add(keyAsString);
+
+                continue;
             }
-            else if (converter == null)
+
+            if (converter == null)
             {
                 converter = TypeDescriptor.GetConverter(key);
             }
 
-            if (converter != null)
+            if (converter.CanConvertTo(typeof(string)) == false)
             {
-                if (converter.CanConvertTo(typeof(string)) == false)
-                {
-                    // We can't convert this type of key to a string
-                    return null;
-                }
-
-                var convertedValue = converter.ConvertTo(key, typeof(string));
-
-                if (convertedValue is string convertedKey)
-                {
-                    convertedKeys.Add(convertedKey);
-                }
-                else
-                {
-                    // We can't convert this type of key to a string
-                    return null;
-                }
-            }
-            else
-            {
-                // This key type does not give us a type converter
+                // We can't convert this type of key to a string
                 return null;
             }
+
+            var convertedValue = (string)converter.ConvertTo(key, typeof(string));
+
+            convertedKeys.Add(convertedValue);
         }
 
         return convertedKeys;

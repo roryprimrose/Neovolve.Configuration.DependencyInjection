@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 internal class EqualsChangeEvaluator : InternalChangeEvaluator
 {
@@ -10,10 +9,7 @@ internal class EqualsChangeEvaluator : InternalChangeEvaluator
         object? newValue,
         NextFindChanges next)
     {
-        Debug.Assert(originalValue != null,
-            "first should never be null because other internal evaluators should have returned a result before this is executed");
-
-        if (originalValue!.Equals(newValue))
+        if (Equals(originalValue, newValue))
         {
             return Array.Empty<IdentifiedChange>();
         }
@@ -21,10 +17,10 @@ internal class EqualsChangeEvaluator : InternalChangeEvaluator
         var firstLogValue = GetLogValue(originalValue);
         var secondLogValue = GetLogValue(newValue);
 
-        return [new IdentifiedChange(propertyPath, firstLogValue, secondLogValue)];
+        return [new(propertyPath, firstLogValue, secondLogValue)];
     }
 
-    private string GetLogValue(object? value)
+    private static string GetLogValue(object? value)
     {
         return value?.ToString() ?? "null";
     }
