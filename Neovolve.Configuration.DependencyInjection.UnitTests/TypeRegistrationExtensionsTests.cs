@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -329,7 +328,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -367,7 +366,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -405,7 +404,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -441,7 +440,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -477,7 +476,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -575,7 +574,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -613,7 +612,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -651,7 +650,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -687,7 +686,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);

@@ -25,11 +25,11 @@ internal class NullChangeEvaluator : InternalChangeEvaluator
         if (originalValue != null)
         {
             // The second value is null
-            return [new IdentifiedChange(propertyPath, "not null", "null")];
+            return [new(propertyPath, "not null", "null")];
         }
 
         // The first value is null
-        return [new IdentifiedChange(propertyPath, "null", "not null")];
+        return [new(propertyPath, "null", "not null")];
     }
 
     // This should always be the first evaluator. No other evaluator should ever see a null value.

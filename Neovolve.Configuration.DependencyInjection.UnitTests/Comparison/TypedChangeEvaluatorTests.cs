@@ -5,7 +5,6 @@
     using FluentAssertions;
     using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;
-    using NSubstitute;
 
     public class TypedChangeEvaluatorTests
     {

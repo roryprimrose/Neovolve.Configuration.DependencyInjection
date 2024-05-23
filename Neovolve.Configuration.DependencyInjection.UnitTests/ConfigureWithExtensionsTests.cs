@@ -2,16 +2,25 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests;
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Neovolve.Configuration.DependencyInjection.Comparison;
 using NSubstitute;
 
 public class ConfigureWithExtensionsTests
 {
+    public static IEnumerable<object[]> ChangeEvaluatorDataSet()
+    {
+        return typeof(IChangeEvaluator).Assembly.GetTypes()
+            .Where(x => typeof(IChangeEvaluator).IsAssignableFrom(x) && x.IsClass && x.IsAbstract == false)
+            .Select(x => new[] { x });
+    }
+
     public static IEnumerable<object[]> ConfigTypesDataSet(bool configureReload)
     {
         yield return new object[] { typeof(Config), configureReload };
@@ -124,6 +133,28 @@ public class ConfigureWithExtensionsTests
 
         // Exclude log level because it is based on the current environment which is covered by different tests
         actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
+    }
+
+    [Theory]
+    [MemberData(nameof(ChangeEvaluatorDataSet))]
+    public void ConfigureWithRegistersAllChangeEvaluator(Type evaluatorType)
+    {
+        var data = new Dictionary<string, string?>
+        {
+            ["RootValue"] = "This is the root value",
+            ["First:FirstValue"] = "This is the first value",
+            ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:Third:ThirdValue"] = "This is the third value"
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<IEnumerable<IChangeEvaluator>>();
+
+        actual.Should().Contain(x => evaluatorType.IsInstanceOfType(x));
     }
 
     [Theory]

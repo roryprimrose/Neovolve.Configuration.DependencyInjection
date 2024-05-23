@@ -9,7 +9,7 @@ internal class ReloadSource : IConfigurationSource
 
     public ReloadSource(IDictionary<string, string> data)
     {
-        _provider = new ReloadProvider(data);
+        _provider = new(data);
     }
 
     public IConfigurationProvider Build(IConfigurationBuilder builder)

@@ -118,6 +118,12 @@ public static class ConfigureWithExtensions
                     typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
                 services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
                     typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(EquatableChangeEvaluator),
+                    ServiceLifetime.Singleton));
+                services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+                    typeof(ComparableChangeEvaluator),
+                    ServiceLifetime.Singleton));
                 services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator),
                     ServiceLifetime.Singleton));
 
