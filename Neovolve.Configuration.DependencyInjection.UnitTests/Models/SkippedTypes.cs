@@ -9,6 +9,6 @@
     {
         public Guid Id { get; set; }
 
-        public Type TypeReference { get; set; }
+        public Type? TypeReference { get; set; }
     }
 }
