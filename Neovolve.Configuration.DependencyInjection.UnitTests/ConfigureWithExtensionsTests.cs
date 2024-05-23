@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 using NSubstitute;
 
 public class ConfigureWithExtensionsTests
@@ -91,6 +92,26 @@ public class ConfigureWithExtensionsTests
 
         actual.Should().NotBeNull();
         actual.Should().BeAssignableTo(expected);
+    }
+
+    [Fact]
+    public void ConfigureWithDoesNotRegisterSkippedType()
+    {
+        var data = new Dictionary<string, string>
+        {
+            ["Skipped:Id"] = Guid.NewGuid().ToString()
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<SkippedTypesRoot>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<SkippedTypesRoot>();
+
+        actual.Skipped.Id.Should().Be(Guid.Parse(data["Skipped:Id"]));
+
+        host.Services.GetService<Type>().Should().BeNull();
     }
 
     [Fact]
@@ -230,6 +251,29 @@ public class ConfigureWithExtensionsTests
         actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Second"]);
         actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Third"]);
         actual.First.Second.Third.ThirdValue.Should().Be(data["First:Second:Third:ThirdValue"]);
+    }
+
+    [Fact]
+    public void ConfigureWithRegistersSelfReferencingChildTypeOnlyOnce()
+    {
+        var data = new Dictionary<string, string>
+        {
+            ["Self:Id"] = Guid.NewGuid().ToString()
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<SelfReferenceRoot>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<SelfReferenceRoot>();
+
+        actual.Self.Id.Should().Be(Guid.Parse(data["Self:Id"]));
+
+        var references = host.Services.GetRequiredService<IEnumerable<SelfReference>>().ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Should().BeEquivalentTo(actual.Self);
     }
 
     [Fact]

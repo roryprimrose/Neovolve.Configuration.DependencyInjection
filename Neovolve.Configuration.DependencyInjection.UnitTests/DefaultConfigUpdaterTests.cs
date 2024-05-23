@@ -2,10 +2,11 @@
 
 namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using Neovolve.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
+    using Neovolve.Logging.Xunit;
     using NSubstitute;
     using Xunit.Abstractions;
 
@@ -76,10 +77,13 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Theory]
-        [InlineData(LogReadOnlyPropertyType.All, true)]
-        [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, false)]
-        [InlineData(LogReadOnlyPropertyType.None, false)]
-        public void UpdateConfigLogsChangesToReadOnlyReferenceTypeWhenEnabled(LogReadOnlyPropertyType option, bool logWritten)
+        [InlineData(LogLevel.Critical)]
+        [InlineData(LogLevel.Debug)]
+        [InlineData(LogLevel.Error)]
+        [InlineData(LogLevel.Information)]
+        [InlineData(LogLevel.Trace)]
+        [InlineData(LogLevel.Warning)]
+        public void UpdateConfigIgnoresLogForReadOnlyPropertyWhenNoLoggerProvided(LogLevel logLevel)
         {
             var injectedConfig = Model.Create<ReadOnlyType<SimpleType>>();
             var updatedConfig = Model.Create<ReadOnlyType<SimpleType>>();
@@ -87,21 +91,13 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             Use(new ConfigureWithOptions
             {
-                LogReadOnlyPropertyType = option
+                LogReadOnlyPropertyType = LogReadOnlyPropertyType.All,
+                LogReadOnlyPropertyLevel = logLevel
             });
 
-            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+            var action = () => SUT.UpdateConfig(injectedConfig, updatedConfig, name, null);
 
-            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
-
-            if (logWritten)
-            {
-                logger.Entries.Should().Contain(x => x.EventId.Id == 5003);
-            }
-            else
-            {
-                logger.Entries.Should().NotContain(x => x.EventId.Id == 5003);
-            }
+            action.Should().NotThrow();
         }
 
         [Theory]
@@ -128,6 +124,36 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
 
             logger.Entries.Should().Contain(x => x.EventId.Id == 5003 && x.LogLevel == logLevel);
+        }
+
+        [Theory]
+        [InlineData(LogReadOnlyPropertyType.All, true)]
+        [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, false)]
+        [InlineData(LogReadOnlyPropertyType.None, false)]
+        public void UpdateConfigLogsChangesToReadOnlyReferenceTypeWhenEnabled(LogReadOnlyPropertyType option,
+            bool logWritten)
+        {
+            var injectedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var updatedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogReadOnlyPropertyType = option
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            if (logWritten)
+            {
+                logger.Entries.Should().Contain(x => x.EventId.Id == 5003);
+            }
+            else
+            {
+                logger.Entries.Should().NotContain(x => x.EventId.Id == 5003);
+            }
         }
 
         [Theory]
@@ -163,7 +189,8 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         [InlineData(LogReadOnlyPropertyType.All, true)]
         [InlineData(LogReadOnlyPropertyType.ValueTypesOnly, true)]
         [InlineData(LogReadOnlyPropertyType.None, false)]
-        public void UpdateConfigLogsChangesToReadOnlyValueTypeWhenEnabled(LogReadOnlyPropertyType option, bool logWritten)
+        public void UpdateConfigLogsChangesToReadOnlyValueTypeWhenEnabled(LogReadOnlyPropertyType option,
+            bool logWritten)
         {
             var injectedConfig = Model.Create<ReadOnlyType<int>>();
             var updatedConfig = Model.Create<ReadOnlyType<int>>();

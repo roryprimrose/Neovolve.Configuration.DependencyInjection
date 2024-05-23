@@ -9,6 +9,7 @@
     using Microsoft.Extensions.Options;
     using NSubstitute;
     using Xunit.Abstractions;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 
     public class TypeRegistrationExtensionsTests
     {
@@ -82,7 +83,7 @@
         }
 
         [Theory]
-        [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.FirstConfig")]
+        [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.Models.FirstConfig")]
         [InlineData(LogCategoryType.Custom, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
         public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
             string expectedCategory)
@@ -98,6 +99,11 @@
             var updatedData = originalData.ToDictionary(x => x.Key, _ => Guid.NewGuid().ToString());
             var source = new ReloadSource(originalData);
             var factory = Substitute.For<ILoggerFactory>();
+
+            factory.When(x => x.CreateLogger(Arg.Any<string>())).Do(x =>
+            {
+                _output.WriteLine($"Created logger for {x.Arg<string>()}");
+            });
 
             var builder = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })

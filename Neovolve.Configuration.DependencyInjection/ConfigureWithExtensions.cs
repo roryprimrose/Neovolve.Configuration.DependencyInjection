@@ -80,6 +80,13 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
+        // Get the initial options which we need to do the recursion through configuration types
+        // NOTE: This configuration could be different to the singleton registered below which is used at the point of processing configuration updates
+        // The change in the singleton registration is with respect to LogReadOnlyPropertyLevel which is not used for the property recursion so this should be safe
+        var initialOptions = new ConfigureWithOptions();
+        
+        configure(initialOptions);
+
         return builder.ConfigureServices((_, services) =>
             {
                 // Add the configuration registration
@@ -111,6 +118,6 @@ public static class ConfigureWithExtensions
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
             })
-            .RegisterConfigurationRoot<T>();
+            .RegisterConfigurationRoot<T>(initialOptions);
     }
 }
