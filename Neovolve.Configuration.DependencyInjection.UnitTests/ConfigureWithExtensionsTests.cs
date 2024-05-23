@@ -76,6 +76,9 @@ public class ConfigureWithExtensionsTests
                     ["RootValue"] = "This is the root value",
                     ["First:FirstValue"] = "This is the first value",
                     ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:MoreValues:First"] = "First",
+                    ["First:Second:MoreValues:Second"] = "Second",
+                    ["First:Second:MoreValues:Third"] = "Third",
                     ["First:Second:Third:ThirdValue"] = "This is the third value"
                 });
         }).ConfigureWith<Config>(configureReload);
@@ -112,6 +115,9 @@ public class ConfigureWithExtensionsTests
                     ["RootValue"] = "This is the root value",
                     ["First:FirstValue"] = "This is the first value",
                     ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:MoreValues:First"] = "First",
+                    ["First:Second:MoreValues:Second"] = "Second",
+                    ["First:Second:MoreValues:Third"] = "Third",
                     ["First:Second:Third:ThirdValue"] = "This is the third value"
                 });
         }).ConfigureWith<Config>();
@@ -139,6 +145,9 @@ public class ConfigureWithExtensionsTests
                         ["RootValue"] = "This is the root value",
                         ["First:FirstValue"] = "This is the first value",
                         ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:MoreValues:First"] = "First",
+                        ["First:Second:MoreValues:Second"] = "Second",
+                        ["First:Second:MoreValues:Third"] = "Third",
                         ["First:Second:Third:ThirdValue"] = "This is the third value"
                     });
             })
@@ -178,6 +187,9 @@ public class ConfigureWithExtensionsTests
                         ["RootValue"] = "This is the root value",
                         ["First:FirstValue"] = "This is the first value",
                         ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:MoreValues:First"] = "First",
+                        ["First:Second:MoreValues:Second"] = "Second",
+                        ["First:Second:MoreValues:Third"] = "Third",
                         ["First:Second:Third:ThirdValue"] = "This is the third value"
                     });
             })
@@ -198,6 +210,9 @@ public class ConfigureWithExtensionsTests
             ["RootValue"] = "This is the root value",
             ["First:FirstValue"] = "This is the first value",
             ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:MoreValues:First"] = "First",
+            ["First:Second:MoreValues:Second"] = "Second",
+            ["First:Second:MoreValues:Third"] = "Third",
             ["First:Second:Third:ThirdValue"] = "This is the third value"
         };
         var builder = Host.CreateDefaultBuilder()
@@ -211,6 +226,9 @@ public class ConfigureWithExtensionsTests
         actual.RootValue.Should().Be(data["RootValue"]);
         actual.First.FirstValue.Should().Be(data["First:FirstValue"]);
         actual.First.Second.SecondValue.Should().Be(data["First:Second:SecondValue"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:First"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Second"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Third"]);
         actual.First.Second.Third.ThirdValue.Should().Be(data["First:Second:Third:ThirdValue"]);
     }
 
@@ -236,6 +254,9 @@ public class ConfigureWithExtensionsTests
             ["RootValue"] = "This is the root value",
             ["First:FirstValue"] = "This is the first value",
             ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:MoreValues:First"] = "First",
+            ["First:Second:MoreValues:Second"] = "Second",
+            ["First:Second:MoreValues:Third"] = "Third",
             ["First:Second:Third:ThirdValue"] = "This is the third value"
         };
         var builder = Host.CreateDefaultBuilder()

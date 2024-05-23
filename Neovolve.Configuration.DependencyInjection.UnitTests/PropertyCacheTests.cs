@@ -5,6 +5,14 @@
     public class PropertyCacheTests
     {
         [Fact]
+        public void GetBindablePropertiesDoesNotReturnIndexerProperties()
+        {
+            var actual = typeof(List<string>).GetBindableProperties(true);
+
+            actual.Should().NotContain(x => x.Name == "Item");
+        }
+
+        [Fact]
         public void GetBindablePropertiesReturnsCachedProperties()
         {
             var firstActual = typeof(CacheableType).GetBindableProperties(true);

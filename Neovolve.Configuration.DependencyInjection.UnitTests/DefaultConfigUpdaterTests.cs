@@ -2,7 +2,7 @@
 
 namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using Divergic.Logging.Xunit;
+    using Neovolve.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;

@@ -1,13 +1,15 @@
-﻿namespace WebTestHost;
+﻿using System.Collections.ObjectModel;
+
+namespace WebTestHost;
 
 public interface IConfig
 {
-    string RootValue { get; }
+    string RootValue { get; set; }
 }
 
 public class Config : IConfig
 {
-    public FirstConfig First { get; set; } = new();
+    public FirstConfig First { get; } = new();
 
     public string RootValue { get; set; } = string.Empty;
 }
@@ -15,25 +17,29 @@ public class Config : IConfig
 public interface IFirstConfig
 {
     string FirstValue { get; }
+
+    Guid Id { get; }
 }
 
 public class FirstConfig : IFirstConfig
 {
     public string FirstValue { get; set; } = string.Empty;
-
-    public SecondConfig Second { get; set; } = new();
+    public Guid Id { get; set; }
+    public SecondConfig Second { get; } = new();
 }
 
 public interface ISecondConfig
 {
+    Collection<string> MoreValues { get; }
     string SecondValue { get; }
 }
 
 public class SecondConfig : ISecondConfig
 {
+    public Collection<string> MoreValues { get; set; } = new();
     public string SecondValue { get; set; } = string.Empty;
 
-    public ThirdConfig Third { get; set; } = new();
+    public ThirdConfig Third { get; } = new();
 }
 
 public interface IThirdConfig
@@ -45,9 +51,8 @@ public interface IThirdConfig
 
 public class ThirdConfig : IThirdConfig
 {
-    public int TimeoutInSeconds { get; set; } = 123;
+    public string ThirdValue { get; set; } = string.Empty;
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
-
-    public string ThirdValue { get; set; } = string.Empty;
+    public int TimeoutInSeconds { get; set; } = 123;
 }
