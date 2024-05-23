@@ -156,7 +156,7 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
+            var secondExpected = await UpdateConfig();
 
             await Task.Delay(2000);
 
@@ -209,7 +209,7 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First.Second);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
+            var secondExpected = await UpdateConfig();
 
             await Task.Delay(2000);
 
@@ -239,7 +239,7 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First.Second.Third);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
+            var secondExpected = await UpdateConfig();
 
             await Task.Delay(2000);
 
@@ -273,7 +273,7 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
+            var secondExpected = await UpdateConfig();
 
             var secondActual =
                 await WaitForUpdatedData<FirstConfig>(client, url,
@@ -307,11 +307,11 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First.Second);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
-
+            var secondExpected = await UpdateConfig();
+            
             var secondActual =
                 await WaitForUpdatedData<SecondConfig>(client, url,
-                    x => x.SecondValue == secondExpected.First.Second.SecondValue);
+                    x => x.SecondValue == secondExpected.First.Second.SecondValue && x.MoreValues.Count == secondExpected.First.Second.MoreValues.Count);
 
             firstActual.Should().NotBeEquivalentTo(secondActual);
             secondActual.Should().BeEquivalentTo(secondExpected.First.Second);
@@ -341,7 +341,7 @@ public sealed class InjectionTests
 
             firstActual.Should().BeEquivalentTo(firstExpected.First.Second.Third);
 
-            var secondExpected = await UpdateConfig().ConfigureAwait(false);
+            var secondExpected = await UpdateConfig();
 
             var secondActual =
                 await WaitForUpdatedData<ThirdConfig>(client, url,
@@ -434,7 +434,7 @@ public sealed class InjectionTests
 
             _output.WriteLine("Waiting for data change " + timestamp.ElapsedMilliseconds);
 
-            await Task.Delay(100).ConfigureAwait(false);
+            await Task.Delay(1000).ConfigureAwait(false);
 
             data = await GetData<T>(client, url).ConfigureAwait(false);
         } while (predicate(data) == false);
