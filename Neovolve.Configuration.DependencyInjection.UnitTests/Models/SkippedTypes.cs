@@ -1,11 +1,11 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Models
 {
-    public class IgnoredTypesRoot
+    public class SkippedTypesRoot
     {
-        public IgnoredTypes Ignored { get; set; } = new();
+        public SkippedTypes Skipped { get; set; } = new();
     }
 
-    public class IgnoredTypes
+    public class SkippedTypes
     {
         public Guid Id { get; set; }
 

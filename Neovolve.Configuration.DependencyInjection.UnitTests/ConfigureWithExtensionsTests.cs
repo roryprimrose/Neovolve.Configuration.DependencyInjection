@@ -95,21 +95,21 @@ public class ConfigureWithExtensionsTests
     }
 
     [Fact]
-    public void ConfigureWithDoesNotRegisterIgnoredType()
+    public void ConfigureWithDoesNotRegisterSkippedType()
     {
         var data = new Dictionary<string, string>
         {
-            ["Ignored:Id"] = Guid.NewGuid().ToString()
+            ["Skipped:Id"] = Guid.NewGuid().ToString()
         };
         var builder = Host.CreateDefaultBuilder()
             .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
-            .ConfigureWith<IgnoredTypesRoot>();
+            .ConfigureWith<SkippedTypesRoot>();
 
         using var host = builder.Build();
 
-        var actual = host.Services.GetRequiredService<IgnoredTypesRoot>();
+        var actual = host.Services.GetRequiredService<SkippedTypesRoot>();
 
-        actual.Ignored.Id.Should().Be(Guid.Parse(data["Ignored:Id"]));
+        actual.Skipped.Id.Should().Be(Guid.Parse(data["Skipped:Id"]));
 
         host.Services.GetService<Type>().Should().BeNull();
     }
