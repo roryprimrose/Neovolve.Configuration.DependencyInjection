@@ -1,4 +1,4 @@
-﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests;
+﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 
 using System.Collections.ObjectModel;
 
@@ -39,7 +39,7 @@ public class SecondConfig : ISecondConfig
     public Collection<string> MoreValues { get; set; } = new();
     public string SecondValue { get; set; } = string.Empty;
 
-    public ThirdConfig Third { get; set;  } = new();
+    public ThirdConfig Third { get; set; } = new();
 }
 
 public interface IThirdConfig

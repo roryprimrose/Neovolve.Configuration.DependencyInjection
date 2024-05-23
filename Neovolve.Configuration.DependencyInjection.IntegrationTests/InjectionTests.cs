@@ -434,7 +434,7 @@ public sealed class InjectionTests
 
             _output.WriteLine("Waiting for data change " + timestamp.ElapsedMilliseconds);
 
-            await Task.Delay(1000).ConfigureAwait(false);
+            await Task.Delay(100).ConfigureAwait(false);
 
             data = await GetData<T>(client, url).ConfigureAwait(false);
         } while (predicate(data) == false);
