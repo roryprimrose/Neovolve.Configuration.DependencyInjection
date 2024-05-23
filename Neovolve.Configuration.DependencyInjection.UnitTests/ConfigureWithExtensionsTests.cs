@@ -97,7 +97,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithDoesNotRegisterSkippedType()
     {
-        var data = new Dictionary<string, string>
+        var data = new Dictionary<string, string?>
         {
             ["Skipped:Id"] = Guid.NewGuid().ToString()
         };
@@ -109,7 +109,7 @@ public class ConfigureWithExtensionsTests
 
         var actual = host.Services.GetRequiredService<SkippedTypesRoot>();
 
-        actual.Skipped.Id.Should().Be(Guid.Parse(data["Skipped:Id"]));
+        actual.Skipped.Id.Should().Be(Guid.Parse(data["Skipped:Id"]!));
 
         host.Services.GetService<Type>().Should().BeNull();
     }
@@ -256,7 +256,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithRegistersSelfReferencingChildTypeOnlyOnce()
     {
-        var data = new Dictionary<string, string>
+        var data = new Dictionary<string, string?>
         {
             ["Self:Id"] = Guid.NewGuid().ToString()
         };
@@ -268,7 +268,7 @@ public class ConfigureWithExtensionsTests
 
         var actual = host.Services.GetRequiredService<SelfReferenceRoot>();
 
-        actual.Self.Id.Should().Be(Guid.Parse(data["Self:Id"]));
+        actual.Self.Id.Should().Be(Guid.Parse(data["Self:Id"]!));
 
         var references = host.Services.GetRequiredService<IEnumerable<SelfReference>>().ToList();
 
