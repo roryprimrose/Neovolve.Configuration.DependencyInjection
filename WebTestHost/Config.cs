@@ -25,7 +25,7 @@ public class FirstConfig : IFirstConfig
 {
     public string FirstValue { get; set; } = string.Empty;
     public Guid Id { get; set; }
-    public SecondConfig Second { get; } = new();
+    public SecondConfig Second { get; set; } = new();
 }
 
 public interface ISecondConfig
@@ -39,7 +39,7 @@ public class SecondConfig : ISecondConfig
     public Collection<string> MoreValues { get; set; } = new();
     public string SecondValue { get; set; } = string.Empty;
 
-    public ThirdConfig Third { get; } = new();
+    public ThirdConfig Third { get; set;  } = new();
 }
 
 public interface IThirdConfig

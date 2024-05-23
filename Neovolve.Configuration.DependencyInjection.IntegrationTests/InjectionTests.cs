@@ -308,10 +308,10 @@ public sealed class InjectionTests
             firstActual.Should().BeEquivalentTo(firstExpected.First.Second);
 
             var secondExpected = await UpdateConfig();
-
+            
             var secondActual =
                 await WaitForUpdatedData<SecondConfig>(client, url,
-                    x => x.SecondValue == secondExpected.First.Second.SecondValue);
+                    x => x.SecondValue == secondExpected.First.Second.SecondValue && x.MoreValues.Count == secondExpected.First.Second.MoreValues.Count);
 
             firstActual.Should().NotBeEquivalentTo(secondActual);
             secondActual.Should().BeEquivalentTo(secondExpected.First.Second);
