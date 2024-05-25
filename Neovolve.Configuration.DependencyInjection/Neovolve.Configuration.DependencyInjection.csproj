@@ -14,8 +14,8 @@
 		<Description>This library provides IHostBuilder extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.</Description>
 		<Copyright>Copyright © Neovolve 2023</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageProjectUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/Divergic/Neovolve.Configuration.DependencyInjection</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection</RepositoryUrl>
 		<PackageTags>Configuration</PackageTags>
 		<IncludeSymbols>true</IncludeSymbols>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
