@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System;
 using System.Collections;
 using System.Reflection;
 using Microsoft.Extensions.Logging;

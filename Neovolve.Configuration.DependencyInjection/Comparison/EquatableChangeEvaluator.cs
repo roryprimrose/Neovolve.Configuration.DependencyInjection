@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison
 {
-    using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
 
     internal class EquatableChangeEvaluator : InternalChangeEvaluator
@@ -39,7 +37,6 @@
                     [propertyPath, originalValue, newValue!, next])!;
 
             return result;
-
         }
 
         public IEnumerable<IdentifiedChange> FindChanges<T>(string propertyPath, IEquatable<T> originalValue,
@@ -49,10 +46,10 @@
             {
                 return Array.Empty<IdentifiedChange>();
             }
-            
+
             return next(propertyPath, originalValue, newValue);
         }
-        
+
         public override int Order => int.MaxValue - 2;
     }
 }

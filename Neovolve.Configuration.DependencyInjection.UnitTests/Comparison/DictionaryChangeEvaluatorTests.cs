@@ -1,16 +1,13 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
-    using System;
     using System.Collections;
-    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Globalization;
-    using System.Linq;
-    using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;
+    using Neovolve.Logging.Xunit;
     using NSubstitute;
     using Xunit.Abstractions;
 

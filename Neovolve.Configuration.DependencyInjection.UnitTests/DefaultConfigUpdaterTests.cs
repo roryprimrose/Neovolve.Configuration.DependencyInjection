@@ -2,11 +2,11 @@
 
 namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using System;
-    using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
+    using Neovolve.Logging.Xunit;
     using NSubstitute;
     using Xunit.Abstractions;
 
@@ -74,6 +74,30 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             injectedConfig.First.Should().Be(injectedConfig.First);
             updatedConfig.First.Should().Be(updatedConfig.First);
+        }
+
+        [Theory]
+        [InlineData(LogLevel.Critical)]
+        [InlineData(LogLevel.Debug)]
+        [InlineData(LogLevel.Error)]
+        [InlineData(LogLevel.Information)]
+        [InlineData(LogLevel.Trace)]
+        [InlineData(LogLevel.Warning)]
+        public void UpdateConfigIgnoresLogForReadOnlyPropertyWhenNoLoggerProvided(LogLevel logLevel)
+        {
+            var injectedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var updatedConfig = Model.Create<ReadOnlyType<SimpleType>>();
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogReadOnlyPropertyType = LogReadOnlyPropertyType.All,
+                LogReadOnlyPropertyLevel = logLevel
+            });
+
+            var action = () => SUT.UpdateConfig(injectedConfig, updatedConfig, name, null);
+
+            action.Should().NotThrow();
         }
 
         [Theory]

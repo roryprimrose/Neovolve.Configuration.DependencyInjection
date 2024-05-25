@@ -1,8 +1,5 @@
 namespace Neovolve.Configuration.DependencyInjection.UnitTests;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Neovolve.Configuration.DependencyInjection.Comparison;
+using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 using NSubstitute;
 
 public class ConfigureWithExtensionsTests
@@ -87,6 +85,9 @@ public class ConfigureWithExtensionsTests
                     ["RootValue"] = "This is the root value",
                     ["First:FirstValue"] = "This is the first value",
                     ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:MoreValues:First"] = "First",
+                    ["First:Second:MoreValues:Second"] = "Second",
+                    ["First:Second:MoreValues:Third"] = "Third",
                     ["First:Second:Third:ThirdValue"] = "This is the third value"
                 });
         }).ConfigureWith<Config>(configureReload);
@@ -102,37 +103,31 @@ public class ConfigureWithExtensionsTests
     }
 
     [Fact]
+    public void ConfigureWithDoesNotRegisterSkippedType()
+    {
+        var data = new Dictionary<string, string?>
+        {
+            ["Skipped:Id"] = Guid.NewGuid().ToString()
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<SkippedTypesRoot>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<SkippedTypesRoot>();
+
+        actual.Skipped.Id.Should().Be(Guid.Parse(data["Skipped:Id"]!));
+
+        host.Services.GetService<Type>().Should().BeNull();
+    }
+
+    [Fact]
     public void ConfigureWithOptionsThrowsExceptionWithNullBuilder()
     {
         Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, _ => { });
 
         action.Should().Throw<ArgumentNullException>();
-    }
-
-    [Theory]
-    [InlineData(typeof(ConfigureWithOptions))]
-    [InlineData(typeof(IConfigureWithOptions))]
-    public void ConfigureWithRegistersDefaultOptions(Type optionsType)
-    {
-        var expected = new ConfigureWithOptions();
-        var builder = Host.CreateDefaultBuilder().ConfigureAppConfiguration((_, configuration) =>
-        {
-            configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>
-                {
-                    ["RootValue"] = "This is the root value",
-                    ["First:FirstValue"] = "This is the first value",
-                    ["First:Second:SecondValue"] = "This is the second value",
-                    ["First:Second:Third:ThirdValue"] = "This is the third value"
-                });
-        }).ConfigureWith<Config>();
-
-        using var host = builder.Build();
-
-        var actual = host.Services.GetRequiredService(optionsType);
-
-        // Exclude log level because it is based on the current environment which is covered by different tests
-        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
     }
 
     [Theory]
@@ -160,6 +155,35 @@ public class ConfigureWithExtensionsTests
     [Theory]
     [InlineData(typeof(ConfigureWithOptions))]
     [InlineData(typeof(IConfigureWithOptions))]
+    public void ConfigureWithRegistersDefaultOptions(Type optionsType)
+    {
+        var expected = new ConfigureWithOptions();
+        var builder = Host.CreateDefaultBuilder().ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["RootValue"] = "This is the root value",
+                    ["First:FirstValue"] = "This is the first value",
+                    ["First:Second:SecondValue"] = "This is the second value",
+                    ["First:Second:MoreValues:First"] = "First",
+                    ["First:Second:MoreValues:Second"] = "Second",
+                    ["First:Second:MoreValues:Third"] = "Third",
+                    ["First:Second:Third:ThirdValue"] = "This is the third value"
+                });
+        }).ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService(optionsType);
+
+        // Exclude log level because it is based on the current environment which is covered by different tests
+        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
+    }
+
+    [Theory]
+    [InlineData(typeof(ConfigureWithOptions))]
+    [InlineData(typeof(IConfigureWithOptions))]
     public void ConfigureWithRegistersProvidedOptions(Type optionsType)
     {
         var expected = new ConfigureWithOptions();
@@ -172,6 +196,9 @@ public class ConfigureWithExtensionsTests
                         ["RootValue"] = "This is the root value",
                         ["First:FirstValue"] = "This is the first value",
                         ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:MoreValues:First"] = "First",
+                        ["First:Second:MoreValues:Second"] = "Second",
+                        ["First:Second:MoreValues:Third"] = "Third",
                         ["First:Second:Third:ThirdValue"] = "This is the third value"
                     });
             })
@@ -211,6 +238,9 @@ public class ConfigureWithExtensionsTests
                         ["RootValue"] = "This is the root value",
                         ["First:FirstValue"] = "This is the first value",
                         ["First:Second:SecondValue"] = "This is the second value",
+                        ["First:Second:MoreValues:First"] = "First",
+                        ["First:Second:MoreValues:Second"] = "Second",
+                        ["First:Second:MoreValues:Third"] = "Third",
                         ["First:Second:Third:ThirdValue"] = "This is the third value"
                     });
             })
@@ -231,6 +261,9 @@ public class ConfigureWithExtensionsTests
             ["RootValue"] = "This is the root value",
             ["First:FirstValue"] = "This is the first value",
             ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:MoreValues:First"] = "First",
+            ["First:Second:MoreValues:Second"] = "Second",
+            ["First:Second:MoreValues:Third"] = "Third",
             ["First:Second:Third:ThirdValue"] = "This is the third value"
         };
         var builder = Host.CreateDefaultBuilder()
@@ -244,7 +277,33 @@ public class ConfigureWithExtensionsTests
         actual.RootValue.Should().Be(data["RootValue"]);
         actual.First.FirstValue.Should().Be(data["First:FirstValue"]);
         actual.First.Second.SecondValue.Should().Be(data["First:Second:SecondValue"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:First"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Second"]);
+        actual.First.Second.MoreValues.Should().Contain(data["First:Second:MoreValues:Third"]);
         actual.First.Second.Third.ThirdValue.Should().Be(data["First:Second:Third:ThirdValue"]);
+    }
+
+    [Fact]
+    public void ConfigureWithRegistersSelfReferencingChildTypeOnlyOnce()
+    {
+        var data = new Dictionary<string, string?>
+        {
+            ["Self:Id"] = Guid.NewGuid().ToString()
+        };
+        var builder = Host.CreateDefaultBuilder()
+            .ConfigureAppConfiguration((_, configuration) => { configuration.AddInMemoryCollection(data); })
+            .ConfigureWith<SelfReferenceRoot>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<SelfReferenceRoot>();
+
+        actual.Self.Id.Should().Be(Guid.Parse(data["Self:Id"]!));
+
+        var references = host.Services.GetRequiredService<IEnumerable<SelfReference>>().ToList();
+
+        references.Should().HaveCount(1);
+        references[0].Should().BeEquivalentTo(actual.Self);
     }
 
     [Fact]
@@ -269,6 +328,9 @@ public class ConfigureWithExtensionsTests
             ["RootValue"] = "This is the root value",
             ["First:FirstValue"] = "This is the first value",
             ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:MoreValues:First"] = "First",
+            ["First:Second:MoreValues:Second"] = "Second",
+            ["First:Second:MoreValues:Third"] = "Third",
             ["First:Second:Third:ThirdValue"] = "This is the third value"
         };
         var builder = Host.CreateDefaultBuilder()

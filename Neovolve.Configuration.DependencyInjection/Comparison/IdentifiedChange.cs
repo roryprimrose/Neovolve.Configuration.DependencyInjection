@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
-
 /// <summary>
 ///     The <see cref="IdentifiedChange" />
 ///     record defines the result of a comparison between two values.

@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
-    using System;
     using System.Reflection;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +21,8 @@
                 [typeof(IServiceCollection), typeof(IConfigurationSection)],
                 null)!;
 
-        public static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder)
+        public static IHostBuilder RegisterConfigurationRoot<T>(this IHostBuilder builder,
+            IConfigureWithOptions options)
             where T : class
         {
             // Register the configuration types starting from the root type and recursing through all properties
@@ -62,7 +62,7 @@
                     services.AddSingleton(monitorType, _ => null!);
                 }
 
-                RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName);
+                RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName, options);
             });
 
             return builder;
@@ -70,7 +70,7 @@
 
         private static void RegisterChildTypes(IConfiguration configuration, IServiceCollection services,
             Type owningType,
-            string sectionPrefix)
+            string sectionPrefix, IConfigureWithOptions options)
         {
             // Get the reference to the RegisterConfigType method
 
@@ -99,14 +99,26 @@
                     continue;
                 }
 
+                // Ignore the child type if it is the same as the owning type
+                if (configType == owningType)
+                {
+                    continue;
+                }
+
+                // Ignore the child type if it is assignable to anything in the configured ignore list
+                if (options.SkipPropertyTypes.Any(x => x.IsAssignableFrom(configType)))
+                {
+                    continue;
+                }
+
                 var sectionPath = sectionPrefix + propertyInfo.Name;
 
-                RegisterSection(services, configuration, configType, sectionPath);
+                RegisterSection(services, configuration, configType, sectionPath, options);
             }
         }
 
         private static void RegisterSection(IServiceCollection services, IConfiguration configuration, Type configType,
-            string sectionPath)
+            string sectionPath, IConfigureWithOptions options)
         {
             var section = configuration.GetSection(sectionPath);
 
@@ -126,7 +138,7 @@
                 registerConfigInterfaceType.Invoke(null, [services]);
             }
 
-            RegisterChildTypes(configuration, services, configType, sectionPath);
+            RegisterChildTypes(configuration, services, configType, sectionPath, options);
         }
     }
 }

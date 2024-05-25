@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
+using System.Collections.ObjectModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -40,4 +41,9 @@ public interface IConfigureWithOptions
     ///     configuration properties updated as underlying configuration data sources change.
     /// </remarks>
     bool ReloadInjectedRawTypes { get; }
+
+    /// <summary>
+    ///     Gets the collection of types that should be skipped when attempting register types for configuration sections.
+    /// </summary>
+    Collection<Type> SkipPropertyTypes { get; }
 }

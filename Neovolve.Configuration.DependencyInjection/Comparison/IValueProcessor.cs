@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System.Collections.Generic;
-
 /// <summary>
 ///     The <see cref="IValueProcessor" />
 ///     interface defines the methods for evaluating whether a value has changed.

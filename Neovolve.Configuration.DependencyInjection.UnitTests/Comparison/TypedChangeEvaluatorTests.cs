@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
-    using System;
-    using System.Collections.Generic;
     using FluentAssertions;
     using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;
@@ -27,7 +25,7 @@
 
                 return fallbackResults;
             };
-            
+
             var sut = new Wrapper(typeMatchResults);
 
             var actual = sut.FindChanges(expectedPath, first, second, next);

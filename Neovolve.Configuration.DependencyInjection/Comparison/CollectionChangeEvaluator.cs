@@ -1,8 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 
 internal class CollectionChangeEvaluator : InternalTypedChangeEvaluator<ICollection>

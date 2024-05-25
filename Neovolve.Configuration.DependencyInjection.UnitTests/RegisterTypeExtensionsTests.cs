@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using System;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;

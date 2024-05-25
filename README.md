@@ -146,6 +146,7 @@ The following are the default options that `ConfigureWith<T>` uses.
 | LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties |
 | LogReadOnlyPropertyType | `LogReadOnlyPropertyType` | `LogReadOnlyPropertyType.ValueTypesOnly` | The types of read-only properties to log when they are updated. Supported values are `All`, `ValueTypesOnly` and `None.` |
 | ReloadInjectedRawTypes | `bool` | `true` | Determines if raw types that are injected into the configuration system should be reloaded when the configuration changes |
+| SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that should be skipped when registering configuration sections. |
 
 These options can be set in the `ConfigureWith<T>` overload.
 
@@ -157,6 +158,7 @@ var builder = Host.CreateDefaultBuilder()
         x.LogReadOnlyPropertyLevel = LogLevel.Information;
         x.LogReadOnlyPropertyType = LogReadOnlyPropertyType.All;
         x.ReloadInjectedRawTypes = false;
+        x.SkipPropertyTypes.Add(typeof(ComplexTypeNotToBeRegistered));
     });
 ```
 

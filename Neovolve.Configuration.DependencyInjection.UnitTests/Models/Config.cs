@@ -1,4 +1,4 @@
-﻿namespace TestHost;
+﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 
 using System.Collections.ObjectModel;
 

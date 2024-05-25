@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System;
 using Microsoft.Extensions.Options;
 
 internal class MonitorProxy<TConcrete, TInterface> : IOptionsMonitor<TInterface>

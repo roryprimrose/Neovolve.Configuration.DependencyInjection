@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests;
 
-using System.Collections.Generic;
 using Microsoft.Extensions.Configuration;
 
 internal class ReloadSource : IConfigurationSource

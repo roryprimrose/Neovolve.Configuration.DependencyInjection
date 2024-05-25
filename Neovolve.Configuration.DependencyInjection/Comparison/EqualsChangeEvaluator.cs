@@ -1,8 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
-using System.Collections.Generic;
-
 internal class EqualsChangeEvaluator : InternalChangeEvaluator
 {
     public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue,

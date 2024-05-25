@@ -1,9 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 internal class ValueProcessor : IValueProcessor
 {
@@ -65,7 +62,8 @@ internal class ValueProcessor : IValueProcessor
         var allEvaluators = evaluators.ToList();
         var internalChangeEvaluators = allEvaluators.OfType<IInternalChangeEvaluator>().ToList();
         var fallbackEvaluators = internalChangeEvaluators.Where(x => x.IsFinalEvaluator).OrderBy(x => x.Order).ToList();
-        var internalEvaluators = internalChangeEvaluators.Where(x => x.IsFinalEvaluator == false).OrderBy(x => x.Order).ToList();
+        var internalEvaluators = internalChangeEvaluators.Where(x => x.IsFinalEvaluator == false).OrderBy(x => x.Order)
+            .ToList();
         var externalEvaluators = allEvaluators.Except(internalChangeEvaluators);
 
         // Ordering of evaluators will be internal evaluators sorted by Order, external evaluators, then fallback evaluators sorted by Order

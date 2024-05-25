@@ -1,11 +1,9 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
-    using System;
-    using System.Linq;
-    using Divergic.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using Neovolve.Configuration.DependencyInjection.Comparison;
+    using Neovolve.Logging.Xunit;
     using Xunit.Abstractions;
 
     public class ComparableChangeEvaluatorTests
@@ -33,7 +31,7 @@
 
                 return [];
             }).ToList();
-            
+
             actual.Should().HaveCount(1);
 
             var change = actual[0];

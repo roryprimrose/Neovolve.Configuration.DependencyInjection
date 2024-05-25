@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System.Collections.Generic;
-
 /// <summary>
 ///     The next evaluator to use if the current evaluator cannot determine equality.
 /// </summary>

@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison;
 
-using System.Collections.Generic;
-
 /// <summary>
 ///     The <see cref="TypedChangeEvaluator{T}" />
 ///     class is used to simplify the evaluation of values that are of a specific type.

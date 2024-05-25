@@ -1,8 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using FluentAssertions;
     using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;

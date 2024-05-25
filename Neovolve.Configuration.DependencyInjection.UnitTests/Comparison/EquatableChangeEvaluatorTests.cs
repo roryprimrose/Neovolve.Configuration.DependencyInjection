@@ -1,8 +1,7 @@
-﻿using Neovolve.Configuration.DependencyInjection.Comparison;
-
-namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
+﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Comparison
 {
     using FluentAssertions;
+    using Neovolve.Configuration.DependencyInjection.Comparison;
 
     public class EquatableChangeEvaluatorTests
     {

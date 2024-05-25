@@ -1,14 +1,12 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using NSubstitute;
     using Xunit.Abstractions;
 
@@ -84,7 +82,8 @@
         }
 
         [Theory]
-        [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.FirstConfig")]
+        [InlineData(LogCategoryType.TargetType,
+            "Neovolve.Configuration.DependencyInjection.UnitTests.Models.FirstConfig")]
         [InlineData(LogCategoryType.Custom, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
         public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
             string expectedCategory)
@@ -100,6 +99,11 @@
             var updatedData = originalData.ToDictionary(x => x.Key, _ => Guid.NewGuid().ToString());
             var source = new ReloadSource(originalData);
             var factory = Substitute.For<ILoggerFactory>();
+
+            factory.When(x => x.CreateLogger(Arg.Any<string>())).Do(x =>
+            {
+                _output.WriteLine($"Created logger for {x.Arg<string>()}");
+            });
 
             var builder = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })

@@ -1,8 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Reflection;
 
     internal static class PropertyCache
@@ -18,7 +15,7 @@
 
             // Either we are not auto-reloading injected types or the properties do not exist in cache yet
             var properties = (from x in targetType.GetProperties()
-                where x.CanRead && x.GetMethod.IsPublic
+                where x.CanRead && x.GetMethod.IsPublic && !x.GetIndexParameters().Any()
                 select x).ToList();
 
             // We are only going to cache the properties of the target type if auto-reloading injected types is enabled

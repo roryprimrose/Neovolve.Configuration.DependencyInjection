@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.Comparison
 {
-    using System.Collections.Generic;
-
     /// <summary>
     ///     The <see cref="IChangeEvaluator" />
     ///     interface defines the methods for evaluating values and converting them to strings for logging.

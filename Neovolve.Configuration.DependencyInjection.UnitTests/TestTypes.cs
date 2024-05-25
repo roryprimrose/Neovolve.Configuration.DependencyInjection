@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using System;
     using System.Diagnostics.CodeAnalysis;
 
     internal class EmptyClass
