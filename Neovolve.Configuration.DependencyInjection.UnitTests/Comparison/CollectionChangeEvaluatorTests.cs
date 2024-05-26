@@ -112,6 +112,14 @@
         }
 
         [Fact]
+        public void IsFinalEvaluatorReturnsFalse()
+        {
+            var sut = new CollectionChangeEvaluator();
+
+            sut.IsFinalEvaluator.Should().BeFalse();
+        }
+
+        [Fact]
         public void OrderReturnsGreaterThanDictionaryChangeEvaluator()
         {
             var evaluator = new DictionaryChangeEvaluator();

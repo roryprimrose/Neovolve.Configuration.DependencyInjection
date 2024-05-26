@@ -8,7 +8,7 @@ internal class ReferenceChangeEvaluator : InternalChangeEvaluator
     {
         if (ReferenceEquals(originalValue, newValue))
         {
-            return Array.Empty<IdentifiedChange>();
+            return [];
         }
 
         return next(propertyPath, originalValue, newValue);

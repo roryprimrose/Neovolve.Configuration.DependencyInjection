@@ -8,7 +8,7 @@ internal class EqualsChangeEvaluator : InternalChangeEvaluator
     {
         if (Equals(originalValue, newValue))
         {
-            return Array.Empty<IdentifiedChange>();
+            return [];
         }
 
         var firstLogValue = GetLogValue(originalValue);

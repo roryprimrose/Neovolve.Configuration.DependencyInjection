@@ -16,14 +16,14 @@ internal class ValueProcessor : IValueProcessor
     {
         if (_evaluators.Count == 0)
         {
-            return Array.Empty<IdentifiedChange>();
+            return [];
         }
 
         // This class uses a pipeline design where evaluators are chained together to determine if values are equal
         // At any point in the pipeline an evaluator can handle the request and return a definitive result which will short circuit the remainder of the pipeline
 
         // The final evaluator is a dummy evaluator that just returns that the values are equal as there has been nothing up to this point to say otherwise
-        NextFindChanges finalEvaluator = (_, _, _) => Array.Empty<IdentifiedChange>();
+        NextFindChanges finalEvaluator = (_, _, _) => [];
 
         // If there is only one evaluator then just use that evaluator to determine if the values are equal
         if (_evaluators.Count == 1)
@@ -39,8 +39,6 @@ internal class ValueProcessor : IValueProcessor
         // This way we will end up with next being at the start of the pipeline and execute back down through the pipeline to the final evaluator
         for (var index = _evaluators.Count - 1; index >= 0; index--)
         {
-            Debug.WriteLine(next.Target);
-
             // Capture the current value of next so that it can be used in the lambda
             var nextFunc = next;
 

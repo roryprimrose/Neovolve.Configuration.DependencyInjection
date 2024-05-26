@@ -9,7 +9,7 @@ internal class NullChangeEvaluator : InternalChangeEvaluator
         if (originalValue == null
             && newValue == null)
         {
-            return Array.Empty<IdentifiedChange>();
+            return [];
         }
 
         if (originalValue != null

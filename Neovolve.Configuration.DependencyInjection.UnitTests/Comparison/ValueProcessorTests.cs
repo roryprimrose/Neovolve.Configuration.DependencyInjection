@@ -124,7 +124,7 @@
             var originalValue = "someValue";
             var newValue = "someValue";
 
-            var sut = new ValueProcessor(Array.Empty<IChangeEvaluator>());
+            var sut = new ValueProcessor([]);
 
             var actual = sut.FindChanges(propertyPath, originalValue, newValue).ToList();
 

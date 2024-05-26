@@ -104,6 +104,14 @@
         }
 
         [Fact]
+        public void IsFinalEvaluatorReturnsTrue()
+        {
+            var sut = new EqualsChangeEvaluator();
+
+            sut.IsFinalEvaluator.Should().BeTrue();
+        }
+
+        [Fact]
         public void OrderReturnsMaxValue()
         {
             var sut = new EqualsChangeEvaluator();

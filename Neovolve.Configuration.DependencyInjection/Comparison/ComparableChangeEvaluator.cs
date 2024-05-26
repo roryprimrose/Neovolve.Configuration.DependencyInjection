@@ -7,7 +7,7 @@
         {
             if (originalValue.CompareTo(newValue) == 0)
             {
-                return Array.Empty<IdentifiedChange>();
+                return [];
             }
 
             return [new(propertyPath, originalValue.ToString(), newValue.ToString())];

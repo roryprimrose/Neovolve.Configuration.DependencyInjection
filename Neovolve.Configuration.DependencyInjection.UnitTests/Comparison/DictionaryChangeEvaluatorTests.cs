@@ -293,6 +293,14 @@
         }
 
         [Fact]
+        public void IsFinalEvaluatorReturnsFalse()
+        {
+            var sut = new DictionaryChangeEvaluator();
+
+            sut.IsFinalEvaluator.Should().BeFalse();
+        }
+
+        [Fact]
         public void OrderReturnsGreaterThanReferenceChangeEvaluator()
         {
             var evaluator = new ReferenceChangeEvaluator();

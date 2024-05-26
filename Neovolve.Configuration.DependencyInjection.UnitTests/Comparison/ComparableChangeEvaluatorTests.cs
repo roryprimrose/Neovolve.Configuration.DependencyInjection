@@ -66,6 +66,14 @@
         }
 
         [Fact]
+        public void IsFinalEvaluatorReturnsFalse()
+        {
+            var sut = new ComparableChangeEvaluator();
+
+            sut.IsFinalEvaluator.Should().BeFalse();
+        }
+
+        [Fact]
         public void OrderReturnsGreaterThanEquatableChangeEvaluator()
         {
             var otherEvaluator = new EquatableChangeEvaluator();
