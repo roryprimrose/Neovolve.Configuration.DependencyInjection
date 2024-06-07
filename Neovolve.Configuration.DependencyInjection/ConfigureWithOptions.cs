@@ -18,6 +18,9 @@
         public LogCategoryType LogCategoryType { get; set; } = LogCategoryType.TargetType;
 
         /// <inheritdoc />
+        public LogLevel LogPropertyChangeLevel { get; set; } = LogLevel.Information;
+
+        /// <inheritdoc />
         public LogLevel LogReadOnlyPropertyLevel { get; set; } = LogLevel.Warning;
 
         /// <inheritdoc />

@@ -22,6 +22,12 @@ public interface IConfigureWithOptions
     LogCategoryType LogCategoryType { get; }
 
     /// <summary>
+    ///     Gets the log level to use when logging property change notifications when <see cref="ReloadInjectedRawTypes" /> is
+    ///     <c>true</c>.
+    /// </summary>
+    LogLevel LogPropertyChangeLevel { get; }
+
+    /// <summary>
     ///     Gets the log level to use when logging that updates are detected for read only properties.
     /// </summary>
     LogLevel LogReadOnlyPropertyLevel { get; }
