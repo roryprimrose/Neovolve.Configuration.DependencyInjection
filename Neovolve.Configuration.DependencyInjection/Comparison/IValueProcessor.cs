@@ -4,7 +4,7 @@
 ///     The <see cref="IValueProcessor" />
 ///     interface defines the methods for evaluating whether a value has changed.
 /// </summary>
-internal interface IValueProcessor
+public interface IValueProcessor
 {
     /// <summary>
     ///     Determines all the changes for the specified values and how the differences should be reported.

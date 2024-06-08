@@ -1,8 +1,8 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System.Collections;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Neovolve.Configuration.DependencyInjection.Comparison;
 
 /// <summary>
 ///     The <see cref="DefaultConfigUpdater" />
@@ -12,14 +12,17 @@ using Microsoft.Extensions.Logging;
 public partial class DefaultConfigUpdater : IConfigUpdater
 {
     private readonly IConfigureWithOptions _options;
+    private readonly IValueProcessor _valueProcessor;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="DefaultConfigUpdater" /> class.
     /// </summary>
+    /// <param name="valueProcessor">The value processor used to identify whether configuration values have changed.</param>
     /// <param name="options">The options for updating configuration values.</param>
-    public DefaultConfigUpdater(IConfigureWithOptions options)
+    public DefaultConfigUpdater(IValueProcessor valueProcessor, IConfigureWithOptions options)
     {
-        _options = options;
+        _valueProcessor = valueProcessor ?? throw new ArgumentNullException(nameof(valueProcessor));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     /// <inheritdoc />
@@ -62,58 +65,6 @@ public partial class DefaultConfigUpdater : IConfigUpdater
                 LogConfigChanged(logger, targetType);
             }
         }
-    }
-
-    /// <summary>
-    ///     Gets whether the old value and the updated value are the same.
-    /// </summary>
-    /// <param name="oldValue">The old configuration value.</param>
-    /// <param name="updatedValue">The new configuration value.</param>
-    /// <returns><c>true</c> if the configuration value has changed; otherwise <c>false</c>.</returns>
-    /// <remarks>
-    ///     The result of this method determines whether the property on the injected object will be updated with the new value
-    ///     and optionally whether changes will be logged.
-    /// </remarks>
-    protected virtual bool IsMatchingValue(object? oldValue, object? updatedValue)
-    {
-        if (BothValuesNull(oldValue, updatedValue))
-        {
-            // There is no change
-            return true;
-        }
-
-        if (oldValue == null)
-        {
-            return false;
-        }
-
-        if (updatedValue == null)
-        {
-            return false;
-        }
-
-        // If the type is IDictionary then we can check if the count has changed or if any of the items have changed
-        // This needs to be checked before ICollection below because IDictionary implements ICollection but is more specific
-        if (oldValue is IDictionary oldDictionary
-            && updatedValue is IDictionary updatedDictionary)
-        {
-            return IsMatchingDictionary(oldDictionary, updatedDictionary);
-        }
-
-        // If the type is ICollection then we can check if the count has changed or if any of the items have changed
-        if (oldValue is ICollection oldCollection
-            && updatedValue is ICollection updatedCollection)
-        {
-            return IsMatchingCollection(oldCollection, updatedCollection);
-        }
-
-        // Any other scenario we can only rely on Equals
-        if (oldValue.Equals(updatedValue))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>
@@ -164,30 +115,22 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             return false;
         }
 
+        object? updatedValue;
+        object? previousValue;
+
         try
         {
-            var oldValue = property.GetValue(injectedConfig);
-            var updatedValue = property.GetValue(updatedConfig, null);
+            previousValue = property.GetValue(injectedConfig);
+            updatedValue = property.GetValue(updatedConfig, null);
 
-            if (IsMatchingValue(oldValue, updatedValue))
-            {
-                // Both values exist but they are the same
-                return false;
-            }
-
+            // Set the property value on the target object regardless of whether a change has been detected
+            // This ensures that the property is set if there is a bug in change detection to ensure correct operational state of the application
             property.SetValue(injectedConfig, updatedValue);
-
-            if (logger != null)
-            {
-                LogPropertyChanged<T>(property, logger, targetType, oldValue, updatedValue);
-            }
-
-            return true;
         }
         catch (Exception ex)
         {
             // We have failed to copy the value across to the injected config value
-            // We don't want to fail the application so we cannot allow the exception to throw up the stack
+            // We don't want to fail the application, so we cannot allow the exception to throw up the stack
             // We can however attempt to obtain a logger so that we can report the failure
             if (logger != null)
             {
@@ -196,95 +139,48 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
             return false;
         }
-    }
 
-    private static bool BothValuesNull(object? oldValue, object? updatedValue)
-    {
-        if (oldValue != null)
+        if (logger == null)
         {
+            // There is no logger available, so we don't need to do any further processing
             return false;
         }
 
-        if (updatedValue != null)
+        if (logger.IsEnabled(_options.LogPropertyChangeLevel) == false)
         {
+            // The logger that is available is not enabled for the level that we want to log at, so we don't need to do any further processing
             return false;
         }
 
-        return true;
-    }
+        var propertyChanged = false;
 
-    private static void LogPropertyChanged<T>(PropertyInfo property, ILogger logger, Type targetType, object oldValue,
-        object updatedValue)
-    {
-        // Attempt to identify whether there is a friendly log message to be written
-        // Most types (like value types) will work fine with ToString
-        // Types like anything ICollection will not however
-        // In these cases we can do a simple log like entries have been added or removed
-        LogConfigPropertyChanged(logger, targetType, property.Name, oldValue, updatedValue);
-    }
-
-    private bool IsMatchingCollection(ICollection oldCollection, ICollection updatedCollection)
-    {
-        if (oldCollection.Count != updatedCollection.Count)
+        try
         {
-            return false;
-        }
+            // Identify all the changes in the property value and log them
 
-        // We have the same number of items in the collection
-        // We need to check if any of the items have changed
-        var oldEnumerator = oldCollection.GetEnumerator();
-        var updatedEnumerator = updatedCollection.GetEnumerator();
+            var changes = _valueProcessor.FindChanges(property.Name, previousValue, updatedValue);
 
-        while (oldEnumerator.MoveNext()
-               && updatedEnumerator.MoveNext())
-        {
-            if (IsMatchingValue(oldEnumerator.Current, updatedEnumerator.Current) == false)
+            foreach (var change in changes)
             {
-                return false;
+                propertyChanged = true;
+
+                var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+
+                // We are not using the logging source generator here because of the need to use a custom log format
+                logger.Log(_options.LogPropertyChangeLevel, eventId, change.MessageFormat, targetType,
+                    change.PropertyPath, change.FirstLogValue, change.SecondLogValue);
             }
         }
-
-        if (oldEnumerator is IDisposable oldDisposable)
+        catch (Exception ex)
         {
-            oldDisposable.Dispose();
+            // Record this failure with a reference to raising a GitHub issue
+            LogConfigChangeFailed(logger, targetType, property.Name, ex);
         }
 
-        if (updatedEnumerator is IDisposable updatedDisposable)
-        {
-            updatedDisposable.Dispose();
-        }
-
-        return true;
+        return propertyChanged;
     }
 
-    private bool IsMatchingDictionary(IDictionary oldDictionary, IDictionary updatedDictionary)
-    {
-        if (oldDictionary.Count != updatedDictionary.Count)
-        {
-            return false;
-        }
-
-        // We have the same number of items in the dictionary
-        // We need to check if any of the items have changed
-        foreach (DictionaryEntry oldEntry in oldDictionary)
-        {
-            if (updatedDictionary.Contains(oldEntry.Key) == false)
-            {
-                return false;
-            }
-
-            var updatedEntry = updatedDictionary[oldEntry.Key];
-
-            if (IsMatchingValue(oldEntry.Value, updatedEntry) == false)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private bool IsValueType(PropertyInfo property)
+    private static bool IsValueType(PropertyInfo property)
     {
         if (property.PropertyType.IsValueType)
         {

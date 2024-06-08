@@ -5,6 +5,8 @@
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Options;
     using ModelBuilder;
+    using Neovolve.Configuration.DependencyInjection.Comparison;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using NSubstitute;
 
     public class RegisterTypeExtensionsTests
@@ -150,10 +152,12 @@
             var services = new ServiceCollection();
             var name = Guid.NewGuid().ToString();
 
+            var valueProcessor = Substitute.For<IValueProcessor>();
             var section = Substitute.For<IConfigurationSection>();
 
             services.AddSingleton<IConfigureWithOptions>(options);
             services.AddSingleton<IOptionsMonitor<SimpleType>>(monitor);
+            services.AddSingleton(valueProcessor);
             services.AddTransient<IConfigUpdater, DefaultConfigUpdater>();
             services.RegisterConfigType<SimpleType>(section);
 

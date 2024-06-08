@@ -78,7 +78,7 @@
 
             var typedFindChangesMethod = findChangesMethod!.MakeGenericMethod(targetType);
 
-            return _methodCache.AddOrUpdate(targetType, typedFindChangesMethod, (x, y) => y);
+            return _methodCache.AddOrUpdate(targetType, typedFindChangesMethod, (_, y) => y);
         }
 
         public override int Order => int.MaxValue - 2;

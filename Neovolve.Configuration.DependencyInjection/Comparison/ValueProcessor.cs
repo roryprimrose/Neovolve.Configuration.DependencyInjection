@@ -45,7 +45,7 @@ internal class ValueProcessor : IValueProcessor
             var evaluator = _evaluators[index];
 
             // Create a new function that will call the current evaluator with the next function in the pipeline
-            NextFindChanges currentFunc = (x, y, z) => evaluator.FindChanges(propertyPath, y, z, nextFunc);
+            NextFindChanges currentFunc = (x, y, z) => evaluator.FindChanges(x, y, z, nextFunc);
 
             // Set the current function as the next function for the next iteration
             next = currentFunc;
