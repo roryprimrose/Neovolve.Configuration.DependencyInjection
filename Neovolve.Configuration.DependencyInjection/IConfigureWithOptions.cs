@@ -28,7 +28,8 @@ public interface IConfigureWithOptions
     LogLevel LogPropertyChangeLevel { get; }
 
     /// <summary>
-    ///     Gets the log level to use when logging that updates are detected for read only properties.
+    ///     Gets the log level to use when logging that updates are detected for read only properties when <see cref="ReloadInjectedRawTypes" /> is
+    ///     <c>true</c>.
     /// </summary>
     LogLevel LogReadOnlyPropertyLevel { get; }
 

@@ -143,7 +143,8 @@ The following are the default options that `ConfigureWith<T>` uses.
 |-|-|-|-|
 | CustomLogCategory | `string` | `string.Empty` | The custom log category used when `LogCategoryType` is `LogCategoryType.Custom` |
 | LogCategoryType | `LogCategoryType` | `LogCategoryType.TargetType` | The log category to use when logging messages for configuration updates on raw types. Supported values are `TargetType` or `Custom`. |
-| LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties |
+| LogPropertyChangeLevel | `LogLevel` | `LogLevel.Information` | The log level to use when logging that a property on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
+| LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyType | `LogReadOnlyPropertyType` | `LogReadOnlyPropertyType.ValueTypesOnly` | The types of read-only properties to log when they are updated. Supported values are `All`, `ValueTypesOnly` and `None.` |
 | ReloadInjectedRawTypes | `bool` | `true` | Determines if raw types that are injected into the configuration system should be reloaded when the configuration changes |
 | SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that should be skipped when registering configuration sections. |
