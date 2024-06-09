@@ -7,9 +7,9 @@
   <ItemGroup Label="Package Versions used by this repository">
     <!-- Direct dependencies -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.3" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Options" Version="7.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
     <PackageVersion Include="NSubstitute" Version="5.1.0" />
     <PackageVersion Include="FluentAssertions" Version="6.12.0" />
