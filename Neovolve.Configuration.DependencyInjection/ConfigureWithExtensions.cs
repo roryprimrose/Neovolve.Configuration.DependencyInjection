@@ -3,11 +3,11 @@
 
 namespace Microsoft.Extensions.Hosting;
 
-using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
+using Neovolve.Configuration.DependencyInjection.Comparison;
 
 /// <summary>
 ///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
@@ -84,19 +84,19 @@ public static class ConfigureWithExtensions
         // NOTE: This configuration could be different to the singleton registered below which is used at the point of processing configuration updates
         // The change in the singleton registration is with respect to LogReadOnlyPropertyLevel which is not used for the property recursion so this should be safe
         var initialOptions = new ConfigureWithOptions();
-        
+
         configure(initialOptions);
 
         return builder.ConfigureServices((_, services) =>
             {
-                // Add the configuration registration
+                // Add the options registration
                 services.AddSingleton(c =>
                 {
                     var config = new ConfigureWithOptions();
 
                     var hostEnvironment = c.GetService<IHostEnvironment>();
 
-                    if (hostEnvironment != null 
+                    if (hostEnvironment != null
                         && hostEnvironment.IsDevelopment())
                     {
                         config.LogReadOnlyPropertyLevel = LogLevel.Warning;
@@ -111,13 +111,41 @@ public static class ConfigureWithExtensions
                     return config;
                 });
 
-                // Add a redirect from the configuration type to its interface
+                // Add a redirect from the options type to its interface
                 services.AddSingleton<IConfigureWithOptions>(provider =>
                     provider.GetRequiredService<ConfigureWithOptions>());
+
+                services.AddChangeTracking();
 
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
             })
             .RegisterConfigurationRoot<T>(initialOptions);
+    }
+
+    internal static IServiceCollection AddChangeTracking(this IServiceCollection services)
+    {
+        // Register the value evaluators
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator),
+            ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+            typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+            typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+            typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+            typeof(EquatableChangeEvaluator),
+            ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
+            typeof(ComparableChangeEvaluator),
+            ServiceLifetime.Singleton));
+        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator),
+            ServiceLifetime.Singleton));
+
+        // Register the evaluator processor that uses all the evaluators
+        services.AddSingleton<IValueProcessor, ValueProcessor>();
+
+        return services;
     }
 }

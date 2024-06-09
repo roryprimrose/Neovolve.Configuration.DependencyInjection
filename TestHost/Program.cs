@@ -14,7 +14,7 @@ internal class Program
                 {
                     services.AddHostedService<RootConcreteService>();
                     services.AddHostedService<RootInterfaceService>();
-                    
+
                     services.AddHostedService<ConcreteService>();
                     services.AddHostedService<InterfaceService>();
                     services.AddHostedService<OptionsConcreteService>();

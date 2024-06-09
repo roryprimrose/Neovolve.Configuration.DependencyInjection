@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System;
 using System.Collections.ObjectModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +22,14 @@ public interface IConfigureWithOptions
     LogCategoryType LogCategoryType { get; }
 
     /// <summary>
-    ///     Gets the log level to use when logging that updates are detected for read only properties.
+    ///     Gets the log level to use when logging property change notifications when <see cref="ReloadInjectedRawTypes" /> is
+    ///     <c>true</c>.
+    /// </summary>
+    LogLevel LogPropertyChangeLevel { get; }
+
+    /// <summary>
+    ///     Gets the log level to use when logging that updates are detected for read only properties when <see cref="ReloadInjectedRawTypes" /> is
+    ///     <c>true</c>.
     /// </summary>
     LogLevel LogReadOnlyPropertyLevel { get; }
 

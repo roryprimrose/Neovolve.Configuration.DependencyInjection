@@ -3,7 +3,6 @@
     using System;
     using System.Collections;
     using System.Collections.ObjectModel;
-    using System.IO;
     using System.Reflection;
     using Microsoft.Extensions.Logging;
 
@@ -18,6 +17,9 @@
 
         /// <inheritdoc />
         public LogCategoryType LogCategoryType { get; set; } = LogCategoryType.TargetType;
+
+        /// <inheritdoc />
+        public LogLevel LogPropertyChangeLevel { get; set; } = LogLevel.Information;
 
         /// <inheritdoc />
         public LogLevel LogReadOnlyPropertyLevel { get; set; } = LogLevel.Warning;
