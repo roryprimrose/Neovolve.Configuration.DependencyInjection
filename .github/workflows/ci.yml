@@ -19,7 +19,7 @@ jobs:
     steps:
 
     - name: Checkout
-      uses: actions/checkout@v4.1.1
+      uses: actions/checkout@v4.1.7
       with:
         fetch-depth: 0
 
@@ -44,7 +44,7 @@ jobs:
         informationalVersion: ${{ steps.gitversion.outputs.InformationalVersion }}  
         
     - name: Setup dotnet v8.0
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.x' # SDK Version to use.
 
@@ -59,7 +59,7 @@ jobs:
 
     - name: Generate coverage report
       # run: reportgenerator -reports:**/coverage.cobertura.xml -targetdir:Report -reporttypes:HtmlInline_AzurePipelines;Cobertura
-      uses: danielpalme/ReportGenerator-GitHub-Action@5.2.0
+      uses: danielpalme/ReportGenerator-GitHub-Action@5.3.6
       with:
         reports: "**/coverage*cobertura.xml"
         targetdir: "Report"
@@ -85,7 +85,7 @@ jobs:
       run: dotnet pack "./${{ env.projectName }}/${{ env.projectName }}.csproj" -c Release --no-build --include-symbols -o $GITHUB_WORKSPACE/staging
 
     - name: Publish build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: packages
         path: staging
@@ -113,7 +113,7 @@ jobs:
         name: packages
       
     - name: Setup nuget
-      uses: nuget/setup-nuget@v1
+      uses: nuget/setup-nuget@v2
         
     - name: Publish to MyGet.org
       env: 
