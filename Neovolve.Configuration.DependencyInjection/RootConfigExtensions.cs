@@ -1,7 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
-    using System;
-    using System.Linq;
     using System.Reflection;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -63,7 +61,7 @@
                     services.AddScoped(snapshotType, _ => null!);
                     services.AddSingleton(monitorType, _ => null!);
                 }
-                
+
                 RegisterChildTypes(context.Configuration, services, configType, Options.DefaultName, options);
             });
 

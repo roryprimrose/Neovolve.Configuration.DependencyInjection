@@ -5,9 +5,11 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
+    using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using Neovolve.Logging.Xunit;
     using NSubstitute;
+    using NSubstitute.ExceptionExtensions;
     using Xunit.Abstractions;
 
     public sealed class DefaultConfigUpdaterTests : TestsInternal
@@ -15,6 +17,26 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         public DefaultConfigUpdaterTests(ITestOutputHelper output) : base(
             output.BuildLoggerFor<DefaultConfigUpdater>(LogLevel.Trace))
         {
+        }
+
+        [Fact]
+        public void ThrowsExceptionWithNullOptions()
+        {
+            var valueProcessor = Substitute.For<IValueProcessor>();
+
+            var action = () => new DefaultConfigUpdater(valueProcessor, null!);
+
+            action.Should().Throw<ArgumentNullException>();
+        }
+
+        [Fact]
+        public void ThrowsExceptionWithNullValueProcessor()
+        {
+            var options = new ConfigureWithOptions();
+
+            var action = () => new DefaultConfigUpdater(null!, options);
+
+            action.Should().Throw<ArgumentNullException>();
         }
 
         [Theory]
@@ -39,6 +61,31 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Theory]
+        [InlineData(LogLevel.Critical)]
+        [InlineData(LogLevel.Debug)]
+        [InlineData(LogLevel.Error)]
+        [InlineData(LogLevel.Information)]
+        [InlineData(LogLevel.Trace)]
+        [InlineData(LogLevel.Warning)]
+        public void UpdateConfigDoesNotLogChangesToPropertyWithLevelOptionWhenDisabled(LogLevel logLevel)
+        {
+            var injectedConfig = Model.Create<SimpleType>();
+            var updatedConfig = Model.Create<SimpleType>();
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.None
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            logger.Entries.Should().NotContain(x => x.EventId.Id == 5000 && x.LogLevel == logLevel);
+        }
+
+        [Theory]
         [InlineData(typeof(SimpleType))]
         [InlineData(typeof(InheritedType))]
         [InlineData(typeof(NestedType))]
@@ -53,27 +100,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
                 SUT.UpdateConfig(injectedConfig, updatedConfig, name, null);
 
             action.Should().NotThrow();
-        }
-
-        [Theory]
-        [InlineData(null)]
-        [InlineData("injected value")]
-        public void UpdateConfigDoesNotUpdatePropertyWhenBothValuesAreSame(string? value)
-        {
-            var injectedConfig = new SimpleType
-            {
-                First = value
-            };
-            var updatedConfig = new SimpleType
-            {
-                First = value
-            };
-            var name = Guid.NewGuid().ToString();
-
-            SUT.UpdateConfig(injectedConfig, updatedConfig, name, Service<ILogger>());
-
-            injectedConfig.First.Should().Be(injectedConfig.First);
-            updatedConfig.First.Should().Be(updatedConfig.First);
         }
 
         [Theory]
@@ -98,6 +124,33 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             var action = () => SUT.UpdateConfig(injectedConfig, updatedConfig, name, null);
 
             action.Should().NotThrow();
+        }
+
+        [Theory]
+        [InlineData(LogLevel.Critical)]
+        [InlineData(LogLevel.Debug)]
+        [InlineData(LogLevel.Error)]
+        [InlineData(LogLevel.Information)]
+        [InlineData(LogLevel.Trace)]
+        [InlineData(LogLevel.Warning)]
+        public void UpdateConfigLogsChangesToPropertyWithLevelOptionWhenEnabled(LogLevel logLevel)
+        {
+            var injectedConfig = Model.Create<SimpleType>();
+            var updatedConfig = Model.Create<SimpleType>();
+            var name = Guid.NewGuid().ToString();
+            var changes = new IdentifiedChange[]{ Model.Create<IdentifiedChange>()};
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = logLevel
+            });
+            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>()).Returns(changes);
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5000 && x.LogLevel == logLevel);
         }
 
         [Theory]
@@ -213,6 +266,55 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             {
                 logger.Entries.Should().NotContain(x => x.EventId.Id == 5003);
             }
+        }
+
+        [Theory]
+        [InlineData(LogLevel.Critical)]
+        [InlineData(LogLevel.Debug)]
+        [InlineData(LogLevel.Error)]
+        [InlineData(LogLevel.Information)]
+        [InlineData(LogLevel.Trace)]
+        [InlineData(LogLevel.Warning)]
+        public void UpdateConfigLogsFailureToLogPropertyChangesWhenEnabled(LogLevel logLevel)
+        {
+            var injectedConfig = Model.Create<SimpleType>();
+            var updatedConfig = Model.Create<SimpleType>();
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = logLevel
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>())
+                .Throws(new TimeoutException());
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5004 && x.LogLevel == LogLevel.Warning);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("injected value")]
+        public void UpdateConfigRetainsPropertyValueWhenBothValuesAreSame(string? value)
+        {
+            var injectedConfig = new SimpleType
+            {
+                First = value
+            };
+            var updatedConfig = new SimpleType
+            {
+                First = value
+            };
+            var name = Guid.NewGuid().ToString();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, Service<ILogger>());
+
+            injectedConfig.First.Should().Be(injectedConfig.First);
+            updatedConfig.First.Should().Be(updatedConfig.First);
         }
 
         [Fact]

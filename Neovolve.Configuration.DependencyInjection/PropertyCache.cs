@@ -1,8 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Reflection;
 
     internal static class PropertyCache

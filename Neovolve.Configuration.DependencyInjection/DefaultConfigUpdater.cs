@@ -1,8 +1,8 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
+using Neovolve.Configuration.DependencyInjection.Comparison;
 
 /// <summary>
 ///     The <see cref="DefaultConfigUpdater" />
@@ -12,14 +12,17 @@ using Microsoft.Extensions.Logging;
 public partial class DefaultConfigUpdater : IConfigUpdater
 {
     private readonly IConfigureWithOptions _options;
+    private readonly IValueProcessor _valueProcessor;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="DefaultConfigUpdater" /> class.
     /// </summary>
+    /// <param name="valueProcessor">The value processor used to identify whether configuration values have changed.</param>
     /// <param name="options">The options for updating configuration values.</param>
-    public DefaultConfigUpdater(IConfigureWithOptions options)
+    public DefaultConfigUpdater(IValueProcessor valueProcessor, IConfigureWithOptions options)
     {
-        _options = options;
+        _valueProcessor = valueProcessor ?? throw new ArgumentNullException(nameof(valueProcessor));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     /// <inheritdoc />
@@ -62,36 +65,6 @@ public partial class DefaultConfigUpdater : IConfigUpdater
                 LogConfigChanged(logger, targetType);
             }
         }
-    }
-
-    /// <summary>
-    ///     Gets whether the old value and the updated value are the same.
-    /// </summary>
-    /// <param name="oldValue">The old configuration value.</param>
-    /// <param name="updatedValue">The new configuration value.</param>
-    /// <returns><c>true</c> if the configuration value has changed; otherwise <c>false</c>.</returns>
-    /// <remarks>
-    ///     The result of this method determines whether the property on the injected object will be updated with the new value
-    ///     and optionally whether changes will be logged.
-    /// </remarks>
-    protected virtual bool IsMatchingValue(object? oldValue, object? updatedValue)
-    {
-        if (oldValue == null)
-        {
-            return false;
-        }
-
-        if (updatedValue == null)
-        {
-            return false;
-        }
-
-        if (oldValue.Equals(updatedValue))
-        {
-            return true;
-        }
-
-        return false;
     }
 
     /// <summary>
@@ -142,36 +115,22 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             return false;
         }
 
+        object? updatedValue;
+        object? previousValue;
+
         try
         {
-            var oldValue = property.GetValue(injectedConfig);
-            var updatedValue = property.GetValue(updatedConfig, null);
+            previousValue = property.GetValue(injectedConfig);
+            updatedValue = property.GetValue(updatedConfig, null);
 
-            if (BothValuesNull(oldValue, updatedValue))
-            {
-                // There is no change
-                return false;
-            }
-
-            if (IsMatchingValue(oldValue, updatedValue))
-            {
-                // Both values exist but they are the same
-                return false;
-            }
-
+            // Set the property value on the target object regardless of whether a change has been detected
+            // This ensures that the property is set if there is a bug in change detection to ensure correct operational state of the application
             property.SetValue(injectedConfig, updatedValue);
-
-            if (logger != null)
-            {
-                LogConfigPropertyChanged(logger, targetType, property.Name, oldValue, updatedValue);
-            }
-
-            return true;
         }
         catch (Exception ex)
         {
             // We have failed to copy the value across to the injected config value
-            // We don't want to fail the application so we cannot allow the exception to throw up the stack
+            // We don't want to fail the application, so we cannot allow the exception to throw up the stack
             // We can however attempt to obtain a logger so that we can report the failure
             if (logger != null)
             {
@@ -180,24 +139,48 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
             return false;
         }
-    }
 
-    private static bool BothValuesNull(object? oldValue, object? updatedValue)
-    {
-        if (oldValue != null)
+        if (logger == null)
         {
+            // There is no logger available, so we don't need to do any further processing
             return false;
         }
 
-        if (updatedValue != null)
+        if (logger.IsEnabled(_options.LogPropertyChangeLevel) == false)
         {
+            // The logger that is available is not enabled for the level that we want to log at, so we don't need to do any further processing
             return false;
         }
 
-        return true;
+        var propertyChanged = false;
+
+        try
+        {
+            // Identify all the changes in the property value and log them
+
+            var changes = _valueProcessor.FindChanges(property.Name, previousValue, updatedValue);
+
+            foreach (var change in changes)
+            {
+                propertyChanged = true;
+
+                var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+
+                // We are not using the logging source generator here because of the need to use a custom log format
+                logger.Log(_options.LogPropertyChangeLevel, eventId, change.MessageFormat, targetType,
+                    change.PropertyPath, change.FirstLogValue, change.SecondLogValue);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Record this failure with a reference to raising a GitHub issue
+            LogConfigChangeFailed(logger, targetType, property.Name, ex);
+        }
+
+        return propertyChanged;
     }
 
-    private bool IsValueType(PropertyInfo property)
+    private static bool IsValueType(PropertyInfo property)
     {
         if (property.PropertyType.IsValueType)
         {

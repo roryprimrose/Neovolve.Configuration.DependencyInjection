@@ -1,13 +1,13 @@
-﻿using System.Collections.ObjectModel;
+﻿namespace WebTestHost;
 
-namespace WebTestHost;
+using System.Collections.ObjectModel;
 
 public interface IConfig
 {
     string RootValue { get; set; }
 }
 
-public class Config : IConfig
+public class RootConfig : IConfig
 {
     public FirstConfig First { get; } = new();
 
@@ -39,7 +39,7 @@ public class SecondConfig : ISecondConfig
     public Collection<string> MoreValues { get; set; } = new();
     public string SecondValue { get; set; } = string.Empty;
 
-    public ThirdConfig Third { get; set;  } = new();
+    public ThirdConfig Third { get; set; } = new();
 }
 
 public interface IThirdConfig

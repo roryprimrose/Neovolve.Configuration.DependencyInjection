@@ -92,7 +92,7 @@
                             else
                             {
                                 logger = factory.CreateLogger(typeof(TypeRegistrationExtensions).Namespace
-                                                               + ".ConfigureWith");
+                                                              + ".ConfigureWith");
                             }
                         }
 

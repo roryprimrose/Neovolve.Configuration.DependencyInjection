@@ -1,15 +1,14 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests
 {
-    using Neovolve.Logging.Xunit;
     using FluentAssertions;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using NSubstitute;
     using Xunit.Abstractions;
-    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 
     public class TypeRegistrationExtensionsTests
     {
@@ -83,7 +82,8 @@
         }
 
         [Theory]
-        [InlineData(LogCategoryType.TargetType, "Neovolve.Configuration.DependencyInjection.UnitTests.Models.FirstConfig")]
+        [InlineData(LogCategoryType.TargetType,
+            "Neovolve.Configuration.DependencyInjection.UnitTests.Models.FirstConfig")]
         [InlineData(LogCategoryType.Custom, "Neovolve.Configuration.DependencyInjection.ConfigureWith")]
         public void ConfigureWithLogsConfigurationUpdatesBasedOnLogCategoryOptions(LogCategoryType logCategoryType,
             string expectedCategory)
@@ -332,7 +332,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -370,7 +370,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -408,7 +408,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -444,7 +444,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -480,7 +480,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -578,7 +578,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -616,7 +616,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -654,7 +654,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);
@@ -690,7 +690,7 @@
                 .ConfigureLogging(x =>
                 {
                     x.SetMinimumLevel(LogLevel.Debug);
-                    x.AddXunit(_output, new LoggingConfig { LogLevel = LogLevel.Debug });
+                    x.AddXunit(_output, new() { LogLevel = LogLevel.Debug });
                 })
                 .ConfigureAppConfiguration((_, configuration) => { configuration.Add(source); })
                 .ConfigureWith<Config>(true);

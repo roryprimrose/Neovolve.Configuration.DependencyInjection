@@ -2,6 +2,7 @@
 {
     using FluentAssertions;
     using ModelBuilder;
+    using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 
     public class SnapshotProxyTests
     {
