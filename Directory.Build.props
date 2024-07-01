@@ -1,0 +1,6 @@
+<Project>
+	<PropertyGroup>
+		<NoWarn Condition="'$(ProjectName)' != 'Neovolve.Configuration.DependencyInjection'">$(NoWarn);CS1591</NoWarn>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+</Project>
