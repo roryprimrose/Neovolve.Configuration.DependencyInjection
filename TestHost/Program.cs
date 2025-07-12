@@ -8,7 +8,6 @@ internal class Program
     private static async Task Main(string[] args)
     {
         var builder = Host.CreateDefaultBuilder()
-            .ConfigureWith<Config>()
             .ConfigureServices(
                 services =>
                 {
@@ -23,7 +22,8 @@ internal class Program
                     services.AddHostedService<SnapshotInterfaceService>();
                     services.AddHostedService<MonitorConcreteService>();
                     services.AddHostedService<MonitorInterfaceService>();
-                });
+                })
+            .ConfigureWith<Config>();
 
         await builder.RunConsoleAsync().ConfigureAwait(false);
 
