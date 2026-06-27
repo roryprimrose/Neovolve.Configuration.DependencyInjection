@@ -1,8 +1,8 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection.Comparison;
+using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
 ///     The <see cref="DefaultConfigUpdater" />
@@ -39,7 +39,7 @@ public partial class DefaultConfigUpdater : IConfigUpdater
         }
 
         var targetType = typeof(T);
-        var properties = targetType.GetBindableProperties(true);
+        var properties = GetProperties(targetType);
 
         // The IOptionsMonitor<T>.OnChange event gets triggered twice on a change notification for file based configuration
         // To prevent noise in logging and updates to properties, we want to try to detect when an actual change has been made
@@ -49,7 +49,7 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
         foreach (var property in properties)
         {
-            var propertyUpdated = UpdateProperty(property, injectedConfig, updatedConfig, logger);
+            var propertyUpdated = UpdateProperty(targetType, property, injectedConfig, updatedConfig, logger);
 
             if (propertyUpdated)
             {
@@ -78,37 +78,24 @@ public partial class DefaultConfigUpdater : IConfigUpdater
     ///     The intended use of this virtual method is to indicate a writeable property as readonly as a way of preventing it
     ///     from being updated when configuration data changes.
     /// </remarks>
-    protected virtual bool IsWritable(PropertyInfo property)
+    protected virtual bool IsWritable(ConfigPropertyAccessor property)
     {
-        if (property.CanWrite == false)
-        {
-            return false;
-        }
-
-        // CanWrite being true guarantees SetMethod is not null.
-        if (property.SetMethod!.IsPublic == false)
-        {
-            return false;
-        }
-
-        return true;
+        return property.CanWrite;
     }
 
     /// <summary>
     ///     Updates the property value on the injected configuration object with the value from the updated configuration
     ///     object.
     /// </summary>
-    /// <typeparam name="T">The type of configuration object being updated.</typeparam>
+    /// <param name="targetType">The type of configuration object being updated.</param>
     /// <param name="property">The property that has changed.</param>
     /// <param name="injectedConfig">The injected configuration to update.</param>
     /// <param name="updatedConfig">The updated configuration that contains the new data.</param>
     /// <param name="logger">The optional logging object.</param>
     /// <returns><c>true</c> if the property was updated; otherwise <c>false</c>.</returns>
-    protected virtual bool UpdateProperty<T>(PropertyInfo property, T injectedConfig, T updatedConfig,
-        ILogger? logger)
+    protected virtual bool UpdateProperty(Type targetType, ConfigPropertyAccessor property, object injectedConfig,
+        object updatedConfig, ILogger? logger)
     {
-        var targetType = typeof(T);
-
         if (IsWritable(property) == false)
         {
             ReportReadOnlyProperty(targetType, property, logger);
@@ -122,11 +109,11 @@ public partial class DefaultConfigUpdater : IConfigUpdater
         try
         {
             previousValue = property.GetValue(injectedConfig);
-            updatedValue = property.GetValue(updatedConfig, null);
+            updatedValue = property.GetValue(updatedConfig);
 
             // Set the property value on the target object regardless of whether a change has been detected
             // This ensures that the property is set if there is a bug in change detection to ensure correct operational state of the application
-            property.SetValue(injectedConfig, updatedValue);
+            property.SetValue!(injectedConfig, updatedValue);
         }
         catch (Exception ex)
         {
@@ -181,22 +168,20 @@ public partial class DefaultConfigUpdater : IConfigUpdater
         return propertyChanged;
     }
 
-    private static bool IsValueType(PropertyInfo property)
+    private static ConfigPropertyAccessor[] GetProperties(Type targetType)
     {
-        if (property.PropertyType.IsValueType)
+        if (GeneratedConfigRegistry.TryGetProperties(targetType, out var generated))
         {
-            return true;
+            // The source generator has emitted strongly typed accessors for this configuration type.
+            return generated!;
         }
 
-        if (property.PropertyType == typeof(string))
-        {
-            return true;
-        }
-
-        return false;
+        // Fallback used while the source generator is being rolled out for configuration types that have not
+        // been generated yet.
+        return ReflectionPropertyAccessorFactory.GetAccessors(targetType);
     }
 
-    private void ReportReadOnlyProperty(Type targetType, PropertyInfo property, ILogger? logger)
+    private void ReportReadOnlyProperty(Type targetType, ConfigPropertyAccessor property, ILogger? logger)
     {
         if (logger == null)
         {
@@ -214,7 +199,7 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             LogConfigCopyDenied(logger, _options.LogReadOnlyPropertyLevel, targetType, property.Name);
         }
 
-        if (IsValueType(property))
+        if (property.IsValueType)
         {
             LogConfigCopyDenied(logger, _options.LogReadOnlyPropertyLevel, targetType, property.Name);
         }
