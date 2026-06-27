@@ -54,14 +54,79 @@ internal sealed class GeneratorTestHarness
             (CSharpCompilation)outputCompilation);
     }
 
+    /// <summary>
+    ///     Emits the generated compilation to an in-memory assembly, loads it and runs its module initializers so the
+    ///     generated registrations are applied.
+    /// </summary>
+    public Assembly EmitAndLoad()
+    {
+        using var stream = new MemoryStream();
+
+        var result = OutputCompilation.Emit(stream);
+
+        if (result.Success == false)
+        {
+            var errors = string.Join(
+                Environment.NewLine,
+                result.Diagnostics.Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
+
+            throw new InvalidOperationException("Generated code failed to compile:" + Environment.NewLine + errors);
+        }
+
+        var assembly = Assembly.Load(stream.ToArray());
+
+        // Run the [ModuleInitializer] so the generated registrations are applied before the test inspects them.
+        System.Runtime.CompilerServices.RuntimeHelpers.RunModuleConstructor(assembly.ManifestModule.ModuleHandle);
+
+        return assembly;
+    }
+
     private static ImmutableArray<MetadataReference> BuildReferences()
     {
-        var references = AppDomain.CurrentDomain.GetAssemblies()
-            .Where(assembly => assembly.IsDynamic == false && string.IsNullOrEmpty(assembly.Location) == false)
-            .Select(assembly => (MetadataReference)MetadataReference.CreateFromFile(assembly.Location))
-            .ToList();
+        var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var references = new List<MetadataReference>();
+
+        // The trusted platform assemblies list contains the full framework reference set plus the
+        // application's own dependencies (the library, hosting and DI abstractions), so generated code
+        // that references them compiles inside the test compilation.
+        if (AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") is string trustedAssemblies)
+        {
+            foreach (var path in trustedAssemblies.Split(Path.PathSeparator))
+            {
+                AddReference(references, seenPaths, path);
+            }
+        }
+
+        // Force the assemblies the generated code and test sources depend on to be referenced even if they
+        // were not already part of the trusted platform set.
+        AddReference(references, seenPaths, typeof(object).Assembly.Location);
+        AddReference(references, seenPaths, typeof(Microsoft.Extensions.Hosting.IHostBuilder).Assembly.Location);
+        AddReference(references, seenPaths,
+            typeof(Microsoft.Extensions.DependencyInjection.IServiceCollection).Assembly.Location);
+        AddReference(references, seenPaths,
+            typeof(Configuration.DependencyInjection.Generated.GeneratedConfigRegistry).Assembly.Location);
 
         return references.ToImmutableArray();
+    }
+
+    private static void AddReference(List<MetadataReference> references, HashSet<string> seenPaths, string path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        if (File.Exists(path) == false)
+        {
+            return;
+        }
+
+        if (seenPaths.Add(path) == false)
+        {
+            return;
+        }
+
+        references.Add(MetadataReference.CreateFromFile(path));
     }
 
     public ImmutableArray<Diagnostic> CompilationDiagnostics { get; }
