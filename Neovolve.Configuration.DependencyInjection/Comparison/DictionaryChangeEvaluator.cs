@@ -104,7 +104,8 @@ internal class DictionaryChangeEvaluator : InternalTypedChangeEvaluator<IDiction
                 return null;
             }
 
-            var convertedValue = (string)converter.ConvertTo(key, typeof(string));
+            // CanConvertTo(string) was verified above, so ConvertTo returns a non-null string.
+            var convertedValue = (string)converter.ConvertTo(key, typeof(string))!;
 
             convertedKeys.Add(convertedValue);
         }

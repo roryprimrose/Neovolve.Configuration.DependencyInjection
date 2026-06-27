@@ -10,7 +10,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
     using Neovolve.Logging.Xunit;
     using NSubstitute;
     using NSubstitute.ExceptionExtensions;
-    using Xunit.Abstractions;
 
     public sealed class DefaultConfigUpdaterTests : TestsInternal
     {

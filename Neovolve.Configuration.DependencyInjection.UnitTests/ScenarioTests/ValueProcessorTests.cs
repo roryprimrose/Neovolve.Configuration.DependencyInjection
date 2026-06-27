@@ -8,7 +8,6 @@
     using ModelBuilder;
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
-    using Xunit.Abstractions;
 
     public class ValueProcessorTests
     {

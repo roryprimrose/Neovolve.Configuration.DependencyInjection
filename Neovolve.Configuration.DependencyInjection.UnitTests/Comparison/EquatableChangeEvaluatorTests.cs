@@ -6,7 +6,6 @@
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using Neovolve.Logging.Xunit;
-    using Xunit.Abstractions;
 
     public class EquatableChangeEvaluatorTests
     {
