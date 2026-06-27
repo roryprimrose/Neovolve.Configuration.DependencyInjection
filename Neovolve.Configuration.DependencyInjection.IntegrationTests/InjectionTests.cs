@@ -6,7 +6,6 @@ using ModelBuilder;
 using Newtonsoft.Json;
 using WebTestHost;
 using Xunit;
-using Xunit.Abstractions;
 
 public sealed class InjectionTests
     : IClassFixture<CustomWebApplicationFactory<Program>>
@@ -54,9 +53,9 @@ public sealed class InjectionTests
     {
         using var client = _factory.CreateClient();
 
-        var response = await client.GetAsync(url);
+        var response = await client.GetAsync(url, TestContext.Current.CancellationToken);
 
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         _output.WriteLine(content);
 
@@ -158,7 +157,7 @@ public sealed class InjectionTests
 
             var secondExpected = await UpdateConfig();
 
-            await Task.Delay(2000);
+            await Task.Delay(2000, TestContext.Current.CancellationToken);
 
             var secondActual = await GetData<FirstConfig>(client, url);
 
@@ -211,7 +210,7 @@ public sealed class InjectionTests
 
             var secondExpected = await UpdateConfig();
 
-            await Task.Delay(2000);
+            await Task.Delay(2000, TestContext.Current.CancellationToken);
 
             var secondActual = await GetData<SecondConfig>(client, url);
 
@@ -241,7 +240,7 @@ public sealed class InjectionTests
 
             var secondExpected = await UpdateConfig();
 
-            await Task.Delay(2000);
+            await Task.Delay(2000, TestContext.Current.CancellationToken);
 
             var secondActual = await GetData<ThirdConfig>(client, url);
 

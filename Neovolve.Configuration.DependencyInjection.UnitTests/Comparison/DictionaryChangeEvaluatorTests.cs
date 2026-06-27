@@ -9,7 +9,6 @@
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Logging.Xunit;
     using NSubstitute;
-    using Xunit.Abstractions;
 
     public class DictionaryChangeEvaluatorTests
     {

@@ -8,7 +8,6 @@
     using Microsoft.Extensions.Options;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using NSubstitute;
-    using Xunit.Abstractions;
 
     public class TypeRegistrationExtensionsTests
     {

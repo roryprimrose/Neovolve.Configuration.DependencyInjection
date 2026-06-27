@@ -1,23 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
 
+    <!-- xUnit v3 runs on the Microsoft Testing Platform, which requires an executable test host. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <!--
+      The hot-reload integration tests mutate the WebTestHost appsettings.json at its (shared) content
+      root, so the per-TFM test hosts must not run concurrently or they race on that file. Run this
+      project's target frameworks sequentially; the much faster unit tests still parallelise across TFMs.
+    -->
+    <TestTfmsInParallel>false</TestTfmsInParallel>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="ModelBuilder" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.msbuild" />
   </ItemGroup>
 
   <ItemGroup>

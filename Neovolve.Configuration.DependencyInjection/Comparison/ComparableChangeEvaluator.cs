@@ -10,7 +10,7 @@
                 return [];
             }
 
-            return [new(propertyPath, originalValue.ToString(), newValue.ToString())];
+            return [new(propertyPath, originalValue.ToString() ?? string.Empty, newValue.ToString() ?? string.Empty)];
         }
 
         public override int Order => int.MaxValue - 1;

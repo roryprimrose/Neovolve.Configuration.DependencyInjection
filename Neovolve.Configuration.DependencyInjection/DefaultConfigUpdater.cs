@@ -85,7 +85,8 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             return false;
         }
 
-        if (property.SetMethod.IsPublic == false)
+        // CanWrite being true guarantees SetMethod is not null.
+        if (property.SetMethod!.IsPublic == false)
         {
             return false;
         }

@@ -4,7 +4,6 @@
     using Microsoft.Extensions.Logging;
     using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Logging.Xunit;
-    using Xunit.Abstractions;
 
     public class ComparableChangeEvaluatorTests
     {

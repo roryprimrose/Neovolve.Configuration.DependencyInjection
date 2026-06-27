@@ -38,7 +38,8 @@
                 return [];
             }
 
-            var change = new IdentifiedChange(propertyPath, originalValue.ToString(), newValue.ToString());
+            var change = new IdentifiedChange(propertyPath, originalValue.ToString() ?? string.Empty,
+                newValue.ToString() ?? string.Empty);
 
             return [change];
         }
