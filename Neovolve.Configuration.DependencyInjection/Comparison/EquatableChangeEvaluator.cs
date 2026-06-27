@@ -2,11 +2,10 @@
 {
     using System.Collections.Concurrent;
     using System.Diagnostics;
-    using System.Reflection;
 
     internal class EquatableChangeEvaluator : InternalChangeEvaluator
     {
-        private readonly ConcurrentDictionary<Type, MethodInfo> _methodCache = new();
+        private readonly ConcurrentDictionary<Type, bool> _equatableCache = new();
 
         public override IEnumerable<IdentifiedChange> FindChanges(string propertyPath, object? originalValue,
             object? newValue, NextFindChanges next)
@@ -14,72 +13,56 @@
             Debug.Assert(originalValue != null);
             Debug.Assert(newValue != null);
 
-            var method = GetFindMethod(originalValue, newValue);
-
-            if (method == null)
+            // This evaluator only claims values that expose value equality via IEquatable<T> for the same
+            // runtime type. Anything else defers to the next evaluator (for example IComparable handling)
+            // so the pipeline ordering is preserved.
+            if (IsEquatableOfSameType(originalValue!, newValue!) == false)
             {
-                // The type is not IEquatable<T>
                 return next(propertyPath, originalValue, newValue);
             }
 
-            // Invoke the typed FindEquatableChanges method
-            var result =
-                (IEnumerable<IdentifiedChange>)method.Invoke(this,
-                    [propertyPath, originalValue, newValue!])!;
-
-            return result;
-        }
-
-        private IEnumerable<IdentifiedChange> FindEquatableChanges<T>(string propertyPath, IEquatable<T> originalValue,
-            IEquatable<T> newValue)
-        {
-            if (originalValue.Equals(newValue))
+            // A correct IEquatable<T> implementation overrides object.Equals to delegate to its strongly
+            // typed Equals(T), so the value comparison can be performed without resolving and invoking the
+            // generic method through reflection.
+            if (originalValue!.Equals(newValue))
             {
                 return [];
             }
 
             var change = new IdentifiedChange(propertyPath, originalValue.ToString() ?? string.Empty,
-                newValue.ToString() ?? string.Empty);
+                newValue!.ToString() ?? string.Empty);
 
             return [change];
         }
 
-        private MethodInfo? GetFindMethod(object? originalValue, object? newValue)
+        private bool IsEquatableOfSameType(object originalValue, object newValue)
         {
-            var targetType = originalValue!.GetType();
+            var targetType = originalValue.GetType();
 
-            if (_methodCache.TryGetValue(targetType, out var method))
+            if (newValue.GetType() != targetType)
             {
-                return method;
+                // The two values are different runtime types, so they cannot share a single IEquatable<T>
+                // implementation for that type.
+                return false;
             }
 
-            var equatableBase = typeof(IEquatable<>);
-
-            var equatableType = equatableBase.MakeGenericType(targetType);
-
-            // Check if originalValue and newValue implement equatableType
-            if (equatableType.IsInstanceOfType(originalValue) == false)
+            return _equatableCache.GetOrAdd(targetType, static type =>
             {
-                // Default behavior if originalValue does not implement equatableType
-                return null;
-            }
+                var equatableType = typeof(IEquatable<>);
 
-            if (equatableType.IsInstanceOfType(newValue) == false)
-            {
-                // Default behavior if newValue does not implement equatableType
-                return null;
-            }
+                foreach (var implemented in type.GetInterfaces())
+                {
+                    if (implemented.IsGenericType
+                        && implemented.GetGenericTypeDefinition() == equatableType
+                        && implemented.GenericTypeArguments.Length == 1
+                        && implemented.GenericTypeArguments[0] == type)
+                    {
+                        return true;
+                    }
+                }
 
-            // Get the typed FindChanges method
-            var bindingFlags = BindingFlags.NonPublic | BindingFlags.Instance;
-            var findChangesMethod =
-                GetType().GetMethod(nameof(FindEquatableChanges), bindingFlags);
-
-            Debug.Assert(findChangesMethod != null);
-
-            var typedFindChangesMethod = findChangesMethod!.MakeGenericMethod(targetType);
-
-            return _methodCache.AddOrUpdate(targetType, typedFindChangesMethod, (_, y) => y);
+                return false;
+            });
         }
 
         public override int Order => int.MaxValue - 2;
