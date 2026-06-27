@@ -30,6 +30,26 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!--
+			Reference the source generator so it runs during this build, but do not add it as a runtime
+			dependency (ReferenceOutputAssembly=false) and do not flow it to consumers as a normal
+			reference (PrivateAssets=all). The None item below is what ships its DLL inside the package.
+		-->
+		<ProjectReference Include="..\Neovolve.Configuration.DependencyInjection.Generator\Neovolve.Configuration.DependencyInjection.Generator.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+			PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Ship the generator assembly in the package so it runs as an analyzer in consuming projects. -->
+		<None Include="..\Neovolve.Configuration.DependencyInjection.Generator\bin\$(Configuration)\netstandard2.0\Neovolve.Configuration.DependencyInjection.Generator.dll"
+			Pack="true"
+			PackagePath="analyzers\dotnet\cs"
+			Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<InternalsVisibleTo Include="Neovolve.Configuration.DependencyInjection.UnitTests" />
 
 		<!-- This is used to allow mocking libraries to access internal types -->
