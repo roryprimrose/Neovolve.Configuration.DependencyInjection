@@ -25,6 +25,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection\Neovolve.Configuration.DependencyInjection.csproj" />
+    <!-- Run the source generator over this project so the generated configuration path is exercised. -->
+    <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection.Generator\Neovolve.Configuration.DependencyInjection.Generator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
