@@ -14,7 +14,8 @@ internal static class ConfigGraphWalker
 {
     private static readonly SymbolDisplayFormat _fullyQualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
-    public static RootModel WalkRoot(INamedTypeSymbol root, Compilation compilation, CancellationToken cancellationToken)
+    public static RootModel WalkRoot(INamedTypeSymbol root, Compilation compilation, LocationInfo? invocationLocation,
+        CancellationToken cancellationToken)
     {
         var enumerableType = compilation.GetTypeByMetadataName("System.Collections.IEnumerable");
         var typeType = compilation.GetTypeByMetadataName("System.Type");
@@ -40,7 +41,8 @@ internal static class ConfigGraphWalker
             rootName,
             new EquatableArray<string>(rootInterfaces),
             new EquatableArray<ConfigTypeModel>(configTypes.Values.ToImmutableArray()),
-            new EquatableArray<ChildRegistrationModel>(registrations.ToImmutable()));
+            new EquatableArray<ChildRegistrationModel>(registrations.ToImmutable()),
+            invocationLocation);
     }
 
     public static ImmutableArray<ConfigTypeModel> WalkAccessors(INamedTypeSymbol type, Compilation compilation,
@@ -48,7 +50,7 @@ internal static class ConfigGraphWalker
     {
         // Reuse the root walk and keep only the accessor models; attribute-driven generation produces accessors
         // for a type and its reachable graph but does not register a graph registrar.
-        var model = WalkRoot(type, compilation, cancellationToken);
+        var model = WalkRoot(type, compilation, null, cancellationToken);
 
         return ImmutableArray.CreateRange(model.ConfigTypes);
     }
@@ -69,7 +71,8 @@ internal static class ConfigGraphWalker
             propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType));
         }
 
-        return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()));
+        return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()),
+            type.IsValueType, LocationInfo.CreateFrom(type));
     }
 
     private static ImmutableArray<string> GetAccessibleInterfaces(INamedTypeSymbol type, Compilation compilation)
@@ -166,6 +169,24 @@ internal static class ConfigGraphWalker
         return false;
     }
 
+    private static bool IsConfigStruct(INamedTypeSymbol type)
+    {
+        // A struct is treated as a configuration type (rather than a scalar value such as Guid, TimeSpan,
+        // DateTime or Nullable<T>) when it exposes at least one public settable property the binder would
+        // populate from a configuration section.
+        foreach (var property in GetBindableProperties(type))
+        {
+            if (property.SetMethod != null
+                && property.SetMethod.DeclaredAccessibility == Accessibility.Public
+                && property.SetMethod.IsInitOnly == false)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool ShouldRecurse(ITypeSymbol propertyType, INamedTypeSymbol owningType,
         IReadOnlyCollection<INamedTypeSymbol?> skipTypes)
     {
@@ -174,15 +195,18 @@ internal static class ConfigGraphWalker
             return false;
         }
 
-        if (namedType.TypeKind != TypeKind.Class)
+        if (namedType.SpecialType == SpecialType.System_String)
         {
-            // Interfaces and derived types deeper in the graph require attribute hints, which are handled
-            // separately. Value types and strings are never recursed into.
             return false;
         }
 
-        if (namedType.SpecialType == SpecialType.System_String)
+        var isClass = namedType.TypeKind == TypeKind.Class;
+        var isConfigStruct = namedType.TypeKind == TypeKind.Struct && IsConfigStruct(namedType);
+
+        if (isClass == false && isConfigStruct == false)
         {
+            // Interfaces and derived types deeper in the graph require attribute hints, which are handled
+            // separately. Scalar value types are leaf property values and are not recursed into.
             return false;
         }
 
@@ -229,7 +253,7 @@ internal static class ConfigGraphWalker
             var interfaces = GetAccessibleInterfaces(childType, compilation);
 
             registrations.Add(new ChildRegistrationModel(childName, sectionPath,
-                new EquatableArray<string>(interfaces)));
+                new EquatableArray<string>(interfaces), childType.IsValueType));
 
             if (configTypes.ContainsKey(childName) == false)
             {

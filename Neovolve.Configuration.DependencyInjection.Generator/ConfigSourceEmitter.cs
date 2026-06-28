@@ -37,12 +37,25 @@ internal static class ConfigSourceEmitter
         {
             foreach (var configType in root.ConfigTypes)
             {
+                // Value types are registered as one-time snapshots and are never hot reloaded, so they have no
+                // property accessors (and a struct property setter cannot be emitted - it would mutate an
+                // unboxed copy).
+                if (configType.IsValueType)
+                {
+                    continue;
+                }
+
                 distinctTypes[configType.FullyQualifiedName] = configType;
             }
         }
 
         foreach (var configType in extraAccessorTypes)
         {
+            if (configType.IsValueType)
+            {
+                continue;
+            }
+
             distinctTypes[configType.FullyQualifiedName] = configType;
         }
 
@@ -159,8 +172,31 @@ internal static class ConfigSourceEmitter
                 .AppendLine(">(services, root);");
         }
 
+        var structIndex = 0;
+
         foreach (var registration in root.Registrations)
         {
+            if (registration.IsValueType)
+            {
+                // A struct cannot use the options infrastructure, so it is registered as a one-time snapshot and
+                // its interfaces resolve to the same boxed instance.
+                var local = "structValue" + structIndex;
+                structIndex++;
+
+                builder.Append("            var ").Append(local).Append(" = ").Append(SupportType)
+                    .Append(".RegisterConfigStruct<").Append(registration.TypeFullyQualifiedName)
+                    .Append(">(services, configuration.GetSection(\"").Append(registration.SectionPath)
+                    .AppendLine("\"));");
+
+                foreach (var interfaceName in registration.InterfaceFullyQualifiedNames)
+                {
+                    builder.Append("            ").Append(SupportType).Append(".RegisterConfigStructInterface<")
+                        .Append(interfaceName).Append(">(services, ").Append(local).AppendLine(");");
+                }
+
+                continue;
+            }
+
             builder.Append("            ").Append(SupportType).Append(".RegisterConfigType<")
                 .Append(registration.TypeFullyQualifiedName).Append(">(services, configuration.GetSection(\"")
                 .Append(registration.SectionPath).AppendLine("\"));");

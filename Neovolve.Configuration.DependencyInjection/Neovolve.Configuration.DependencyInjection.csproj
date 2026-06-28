@@ -50,6 +50,25 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!--
+			Reference the code fix provider so it builds alongside the library, but do not flow it as a
+			runtime reference. The None item below ships its DLL inside the package next to the generator.
+		-->
+		<ProjectReference Include="..\Neovolve.Configuration.DependencyInjection.CodeFixes\Neovolve.Configuration.DependencyInjection.CodeFixes.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false"
+			PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- Ship the code fix assembly in the package so the NCDI001 fix is available in consuming IDEs. -->
+		<None Include="..\Neovolve.Configuration.DependencyInjection.CodeFixes\bin\$(Configuration)\netstandard2.0\Neovolve.Configuration.DependencyInjection.CodeFixes.dll"
+			Pack="true"
+			PackagePath="analyzers\dotnet\cs"
+			Visible="false" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<InternalsVisibleTo Include="Neovolve.Configuration.DependencyInjection.UnitTests" />
 
 		<!-- This is used to allow mocking libraries to access internal types -->

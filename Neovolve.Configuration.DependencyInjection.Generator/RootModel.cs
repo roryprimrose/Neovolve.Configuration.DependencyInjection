@@ -10,12 +10,14 @@ internal readonly struct RootModel : IEquatable<RootModel>
         string rootTypeFullyQualifiedName,
         EquatableArray<string> rootInterfaceFullyQualifiedNames,
         EquatableArray<ConfigTypeModel> configTypes,
-        EquatableArray<ChildRegistrationModel> registrations)
+        EquatableArray<ChildRegistrationModel> registrations,
+        LocationInfo? invocationLocation)
     {
         RootTypeFullyQualifiedName = rootTypeFullyQualifiedName;
         RootInterfaceFullyQualifiedNames = rootInterfaceFullyQualifiedNames;
         ConfigTypes = configTypes;
         Registrations = registrations;
+        InvocationLocation = invocationLocation;
     }
 
     public bool Equals(RootModel other)
@@ -23,7 +25,8 @@ internal readonly struct RootModel : IEquatable<RootModel>
         return RootTypeFullyQualifiedName == other.RootTypeFullyQualifiedName
             && RootInterfaceFullyQualifiedNames.Equals(other.RootInterfaceFullyQualifiedNames)
             && ConfigTypes.Equals(other.ConfigTypes)
-            && Registrations.Equals(other.Registrations);
+            && Registrations.Equals(other.Registrations)
+            && Nullable.Equals(InvocationLocation, other.InvocationLocation);
     }
 
     public override bool Equals(object? obj)
@@ -39,11 +42,14 @@ internal readonly struct RootModel : IEquatable<RootModel>
         hash = (hash * 31) + RootInterfaceFullyQualifiedNames.GetHashCode();
         hash = (hash * 31) + ConfigTypes.GetHashCode();
         hash = (hash * 31) + Registrations.GetHashCode();
+        hash = (hash * 31) + (InvocationLocation?.GetHashCode() ?? 0);
 
         return hash;
     }
 
     public EquatableArray<ConfigTypeModel> ConfigTypes { get; }
+
+    public LocationInfo? InvocationLocation { get; }
 
     public EquatableArray<ChildRegistrationModel> Registrations { get; }
 

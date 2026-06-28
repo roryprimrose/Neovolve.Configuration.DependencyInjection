@@ -87,12 +87,65 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
             return;
         }
 
+        ReportNotHotReloadable(context, distinctRoots.Values);
+
         var source = ConfigSourceEmitter.Emit(
             distinctRoots.Values.ToImmutableArray(),
             extraTypes.Values.ToImmutableArray(),
             hasModuleInitializer);
 
         context.AddSource("NeovolveConfigurationBinders.g.cs", source);
+    }
+
+    private static void ReportNotHotReloadable(SourceProductionContext context, IEnumerable<RootModel> roots)
+    {
+        var reported = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var root in roots)
+        {
+            foreach (var configType in root.ConfigTypes)
+            {
+                if (configType.FullyQualifiedName == root.RootTypeFullyQualifiedName)
+                {
+                    // The root configuration type is not hot reloaded, so its mutability is irrelevant.
+                    continue;
+                }
+
+                string reason;
+                string fix;
+
+                if (configType.IsValueType)
+                {
+                    reason = "is a value type";
+                    fix = "convert it to a class to support hot reload";
+                }
+                else if (configType.Properties.Count > 0 && configType.HasWritableProperty == false)
+                {
+                    reason = "has no writable properties";
+                    fix = "add settable properties or convert it to a mutable class";
+                }
+                else
+                {
+                    continue;
+                }
+
+                if (reported.Add(configType.FullyQualifiedName) == false)
+                {
+                    continue;
+                }
+
+                var location = configType.DeclarationLocation?.ToLocation()
+                    ?? root.InvocationLocation?.ToLocation()
+                    ?? Location.None;
+
+                var displayName = configType.FullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
+                    ? configType.FullyQualifiedName.Substring("global::".Length)
+                    : configType.FullyQualifiedName;
+
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.NotHotReloadable, location, displayName, reason, fix));
+            }
+        }
     }
 
     private static bool HasModuleInitializer(Compilation compilation)
@@ -135,7 +188,9 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
             return default;
         }
 
-        return ConfigGraphWalker.WalkRoot(rootType, context.SemanticModel.Compilation, token);
+        var invocationLocation = LocationInfo.CreateFrom(invocation.GetLocation());
+
+        return ConfigGraphWalker.WalkRoot(rootType, context.SemanticModel.Compilation, invocationLocation, token);
     }
 
     private static EquatableArray<ConfigTypeModel> TransformAttribute(GeneratorAttributeSyntaxContext context,

@@ -6,6 +6,37 @@ using Xunit;
 
 public class ConfigureWithGeneratorTests
 {
+    private const string StructGraphSource = @"
+namespace Sample
+{
+    using Microsoft.Extensions.Hosting;
+
+    public interface ISettings
+    {
+        string Name { get; }
+    }
+
+    public struct SettingsStruct : ISettings
+    {
+        public string Name { get; set; }
+        public int Count { get; set; }
+    }
+
+    public sealed class RootConfig
+    {
+        public SettingsStruct Settings { get; set; }
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder)
+        {
+            builder.ConfigureWith<RootConfig>();
+        }
+    }
+}";
+
     private const string NestedGraphSource = @"
 namespace Sample
 {
@@ -214,5 +245,71 @@ namespace Sample
 
         // The Value property is read only, so its accessor cannot be written.
         accessors!.Single(accessor => accessor.Name == "Value").CanWrite.Should().BeFalse();
+    }
+
+    [Fact]
+    public void GeneratesStructRegistrationAndInterfaceForConfigStruct()
+    {
+        var harness = GeneratorTestHarness.Run(StructGraphSource);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var generated = harness.GeneratedSources[0];
+
+        generated.Should().Contain("RegisterConfigStruct<global::Sample.SettingsStruct>");
+        generated.Should().Contain("RegisterConfigStructInterface<global::Sample.ISettings>");
+    }
+
+    [Fact]
+    public void ReportsNotHotReloadableForStructConfigType()
+    {
+        var harness = GeneratorTestHarness.Run(StructGraphSource);
+
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.SettingsStruct"));
+
+        // The root is not hot reloaded, so it is never reported.
+        harness.GeneratorDiagnostics.Should()
+            .NotContain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.RootConfig"));
+    }
+
+    [Fact]
+    public void ReportsNotHotReloadableForRecordWithNoWritableProperties()
+    {
+        const string source = @"
+namespace Sample
+{
+    using Microsoft.Extensions.Hosting;
+
+    public sealed record ChildRecord(string Name, int Value);
+
+    public sealed class RootConfig
+    {
+        public ChildRecord Child { get; set; } = new(string.Empty, 0);
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.ChildRecord")
+                && diagnostic.GetMessage().Contains("no writable properties"));
+    }
+
+    [Fact]
+    public void DoesNotReportNotHotReloadableForMutableClassGraph()
+    {
+        var harness = GeneratorTestHarness.Run(NestedGraphSource);
+
+        harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI001");
     }
 }

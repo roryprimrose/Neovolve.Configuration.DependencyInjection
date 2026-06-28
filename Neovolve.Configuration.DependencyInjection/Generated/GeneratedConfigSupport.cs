@@ -84,5 +84,43 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         {
             services.RegisterConfigInterfaceType<TConcrete, TInterface>();
         }
+
+        /// <summary>
+        ///     Registers a value type (struct) child configuration type as a singleton bound from the supplied configuration
+        ///     section.
+        /// </summary>
+        /// <typeparam name="T">The struct child configuration type.</typeparam>
+        /// <param name="services">The service collection to register into.</param>
+        /// <param name="section">The configuration section bound to the type.</param>
+        /// <returns>The boxed bound value so the same instance can be registered for the type's interfaces.</returns>
+        /// <remarks>
+        ///     A struct cannot flow through the options infrastructure (which requires a class) and cannot be mutated in
+        ///     place, so it is registered as a one-time snapshot and does not support hot reload.
+        /// </remarks>
+        public static object RegisterConfigStruct<T>(IServiceCollection services, IConfigurationSection section)
+            where T : struct
+        {
+            var value = section.Get<T>();
+
+            // Box once so the concrete type and all its interfaces resolve to the same instance.
+            object boxed = value;
+
+            services.AddSingleton(typeof(T), boxed);
+
+            return boxed;
+        }
+
+        /// <summary>
+        ///     Registers the redirection from a struct child configuration type to one of its interfaces using the same boxed
+        ///     instance.
+        /// </summary>
+        /// <typeparam name="TInterface">The interface implemented by the struct type.</typeparam>
+        /// <param name="services">The service collection to register into.</param>
+        /// <param name="value">The boxed value returned from <see cref="RegisterConfigStruct{T}" />.</param>
+        public static void RegisterConfigStructInterface<TInterface>(IServiceCollection services, object value)
+            where TInterface : class
+        {
+            services.AddSingleton(typeof(TInterface), value);
+        }
     }
 }

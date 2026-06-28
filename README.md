@@ -105,7 +105,7 @@ var builder = Host.CreateDefaultBuilder()
 Given the above example, the following services would be registered with the host application:
 
 | Type | IOptions&lt;T&gt; | IOptionsSnapshot&lt;T&gt; | IOptionsMonitor&lt;T&gt; | Supports hot reload |
-|-|-|-|-|
+|-|-|-|-|-|
 | RootConfig | No | No | No | No |
 | IRootConfig | No | No | No | No |
 | FirstConfig | Yes | Yes | Yes | Yes, except for IOptions&lt;FirstConfig&gt; |
@@ -135,6 +135,26 @@ This package detects when a configuration change has occurred by watching `IOpti
 The reason to use `IOptionsMonitor<>` instead of the raw type is when the application class wants to hook into the `IOptionsMonitor.OnChange` method itself to run some custom code when the configuration changes.
 
 The hot reload support for raw configuration types can be disabled by setting the `ReloadInjectedRawTypes` option to `false` in the `ConfigureWith<T>` overload.
+
+## Configuration types must be mutable classes to hot reload
+Hot reload works by updating the existing singleton instance of a configuration type in place when the configuration changes. That requires the type to be a reference type with writable properties. Two kinds of configuration type cannot be hot reloaded:
+
+- **Value types** (`struct` and `record struct`). A struct is copied when it is injected, so updating the registered instance would not reach the copies already handed to application classes. Struct configuration types are bound and registered once as a snapshot of the configuration at startup, and they do not receive later updates.
+- **Reference types with no writable properties** (for example a positional `record` whose properties are all `init`-only). There is nowhere to write the updated values, so the injected instance keeps its startup values.
+
+The source generator reports these cases at compile time as warning **NCDI001** so the limitation is visible where the type is declared rather than failing silently at runtime. The accompanying code fix converts a `struct` (or `record struct`) configuration type into a class so it can hot reload. For a record with no writable properties, add settable properties or convert it to a mutable class.
+
+If a one-time snapshot is the intended behaviour for a given type, suppress the warning for that type:
+
+```csharp
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Neovolve.Configuration", "NCDI001", Justification = "Snapshot binding is intended for this type.")]
+public struct StartupOnlySettings
+{
+    public string Name { get; set; }
+}
+```
+
+The warning can also be disabled project-wide with `<NoWarn>$(NoWarn);NCDI001</NoWarn>`.
 
 # Options
 The following are the default options that `ConfigureWith<T>` uses.
@@ -173,6 +193,8 @@ using Neovolve.Configuration.DependencyInjection.Generated;
 
 [assembly: GenerateConfigAccessors(typeof(StandaloneConfig), typeof(Holder<string>))]
 ```
+
+The generator also reports diagnostic **NCDI001** when a configuration type in the graph cannot be hot reloaded (see [Configuration types must be mutable classes to hot reload](#configuration-types-must-be-mutable-classes-to-hot-reload)). A code fix is included to convert a `struct` configuration type into a class.
 
 # Recommendations
 
