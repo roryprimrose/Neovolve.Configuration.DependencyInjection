@@ -11,10 +11,12 @@ using System.Text;
 /// </summary>
 internal static class ConfigSourceEmitter
 {
-    private const string AccessorType =
-        "global::Neovolve.Configuration.DependencyInjection.Generated.ConfigPropertyAccessor";
+    private const string ApplierInterfaceType =
+        "global::Neovolve.Configuration.DependencyInjection.Generated.IConfigValueApplier";
 
     private const string ConfigurationType = "global::Microsoft.Extensions.Configuration.IConfiguration";
+
+    private const string EqualityComparerType = "global::System.Collections.Generic.EqualityComparer";
 
     private const string RegistrarInterfaceType =
         "global::Neovolve.Configuration.DependencyInjection.Generated.IConfigGraphRegistrar";
@@ -27,6 +29,9 @@ internal static class ConfigSourceEmitter
 
     private const string SupportType =
         "global::Neovolve.Configuration.DependencyInjection.Generated.GeneratedConfigSupport";
+
+    private const string UpdateContextType =
+        "global::Neovolve.Configuration.DependencyInjection.Generated.IConfigUpdateContext";
 
     public static string Emit(ImmutableArray<RootModel> roots, ImmutableArray<ConfigTypeModel> extraAccessorTypes,
         bool hasModuleInitializer)
@@ -86,6 +91,23 @@ internal static class ConfigSourceEmitter
             EmitRegistrar(builder, root);
         }
 
+        if (orderedTypes.Length > 0)
+        {
+            // The appliers copy strongly typed property values; nullability annotations on those properties are not
+            // relevant to the copy and would otherwise require per-property suppression, so the appliers are emitted
+            // with nullable analysis disabled.
+            builder.AppendLine("#nullable disable");
+            builder.AppendLine();
+
+            foreach (var type in orderedTypes)
+            {
+                EmitApplierClass(builder, type);
+            }
+
+            builder.AppendLine("#nullable restore");
+            builder.AppendLine();
+        }
+
         builder.AppendLine("    internal static class GeneratedConfigBinders");
         builder.AppendLine("    {");
         builder.AppendLine("        [global::System.Runtime.CompilerServices.ModuleInitializer]");
@@ -94,7 +116,7 @@ internal static class ConfigSourceEmitter
 
         foreach (var type in orderedTypes)
         {
-            EmitTypeRegistration(builder, type);
+            EmitApplierRegistration(builder, type);
         }
 
         foreach (var root in orderedRoots)
@@ -111,31 +133,74 @@ internal static class ConfigSourceEmitter
         return builder.ToString();
     }
 
-    private static void EmitAccessor(StringBuilder builder, string typeName, ConfigPropertyModel property)
+    private static void EmitApplierClass(StringBuilder builder, ConfigTypeModel type)
     {
-        var canWrite = property.CanWrite ? "true" : "false";
-        var isValueType = property.IsValueType ? "true" : "false";
+        var applierName = ApplierName(type.FullyQualifiedName);
 
-        builder.Append("                    new ").Append(AccessorType).Append('(')
-            .Append('"').Append(property.Name).Append("\", ")
-            .Append(canWrite).Append(", ")
-            .Append(isValueType).AppendLine(",");
+        builder.Append("    internal sealed class ").Append(applierName).Append(" : ")
+            .Append(ApplierInterfaceType).Append('<').Append(type.FullyQualifiedName).AppendLine(">");
+        builder.AppendLine("    {");
+        builder.Append("        public bool Apply(").Append(type.FullyQualifiedName).Append(" injected, ")
+            .Append(type.FullyQualifiedName).Append(" updated, ").Append(UpdateContextType).AppendLine(" context)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            var changed = false;");
 
-        // Getter delegate: read the property and return it boxed as object.
-        builder.Append("                        static instance => ((").Append(typeName).Append(")instance).")
-            .Append(property.Name).AppendLine(",");
-
-        if (property.CanWrite)
+        foreach (var property in type.Properties)
         {
-            // Setter delegate: cast the boxed value back to the property type and assign it.
-            builder.Append("                        static (instance, value) => ((").Append(typeName)
-                .Append(")instance).").Append(property.Name).Append(" = (")
-                .Append(property.TypeFullyQualifiedName).AppendLine(")value!),");
+            EmitApplyProperty(builder, property);
         }
-        else
+
+        builder.AppendLine("            return changed;");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+    }
+
+    private static void EmitApplyProperty(StringBuilder builder, ConfigPropertyModel property)
+    {
+        if (property.CanWrite == false)
         {
-            builder.AppendLine("                        null),");
+            // A read only property is never copied; the context applies the configured read only logging policy.
+            var isValueType = property.IsValueType ? "true" : "false";
+
+            builder.Append("            context.ReportReadOnly(\"").Append(property.Name).Append("\", ")
+                .Append(isValueType).AppendLine(");");
+
+            return;
         }
+
+        // A writable property is copied directly. The get, set and equality check are wrapped per property so that a
+        // single faulty member cannot stop the rest of the configuration from updating, matching the resilience of the
+        // previous delegate based updater.
+        builder.AppendLine("            {");
+        builder.AppendLine("                var report = false;");
+        builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" previous = default;");
+        builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" current = default;");
+        builder.AppendLine("                try");
+        builder.AppendLine("                {");
+        builder.Append("                    previous = injected.").Append(property.Name).AppendLine(";");
+        builder.Append("                    current = updated.").Append(property.Name).AppendLine(";");
+        builder.Append("                    injected.").Append(property.Name).AppendLine(" = current;");
+        builder.Append("                    report = ").Append(EqualityComparerType).Append('<')
+            .Append(property.TypeFullyQualifiedName).AppendLine(">.Default.Equals(previous, current) == false;");
+        builder.AppendLine("                }");
+        builder.AppendLine("                catch (global::System.Exception ex)");
+        builder.AppendLine("                {");
+        builder.Append("                    context.ReportCopyFailure(\"").Append(property.Name).AppendLine("\", ex);");
+        builder.AppendLine("                }");
+        builder.AppendLine("                if (report && context.IsChangeLoggingEnabled)");
+        builder.AppendLine("                {");
+        builder.Append("                    changed |= context.Report(\"").Append(property.Name)
+            .AppendLine("\", previous, current);");
+        builder.AppendLine("                }");
+        builder.AppendLine("            }");
+    }
+
+    private static void EmitApplierRegistration(StringBuilder builder, ConfigTypeModel type)
+    {
+        builder.Append("            ").Append(RegistryType).Append(".RegisterApplier(typeof(")
+            .Append(type.FullyQualifiedName).Append("), new ").Append(ApplierName(type.FullyQualifiedName))
+            .AppendLine("());");
     }
 
     private static void EmitModuleInitializerPolyfill(StringBuilder builder)
@@ -214,30 +279,25 @@ internal static class ConfigSourceEmitter
         builder.AppendLine();
     }
 
-    private static void EmitTypeRegistration(StringBuilder builder, ConfigTypeModel type)
+    private static string ApplierName(string typeFullyQualifiedName)
     {
-        builder.Append("            ").Append(RegistryType).Append(".RegisterProperties(typeof(")
-            .Append(type.FullyQualifiedName).AppendLine("),");
-        builder.Append("                new ").Append(AccessorType).AppendLine("[]");
-        builder.AppendLine("                {");
-
-        foreach (var property in type.Properties)
-        {
-            EmitAccessor(builder, type.FullyQualifiedName, property);
-        }
-
-        builder.AppendLine("                });");
+        return SanitizeIdentifier(typeFullyQualifiedName, "_Applier");
     }
 
     private static string RegistrarName(string rootTypeFullyQualifiedName)
     {
-        var builder = new StringBuilder(rootTypeFullyQualifiedName.Length);
+        return SanitizeIdentifier(rootTypeFullyQualifiedName, "_Registrar");
+    }
 
-        foreach (var character in rootTypeFullyQualifiedName)
+    private static string SanitizeIdentifier(string typeFullyQualifiedName, string suffix)
+    {
+        var builder = new StringBuilder(typeFullyQualifiedName.Length + suffix.Length);
+
+        foreach (var character in typeFullyQualifiedName)
         {
             builder.Append(char.IsLetterOrDigit(character) ? character : '_');
         }
 
-        return builder.Append("_Registrar").ToString();
+        return builder.Append(suffix).ToString();
     }
 }

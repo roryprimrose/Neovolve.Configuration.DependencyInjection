@@ -15,7 +15,7 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static class GeneratedConfigRegistry
     {
-        private static readonly ConcurrentDictionary<Type, ConfigPropertyAccessor[]> _properties = new();
+        private static readonly ConcurrentDictionary<Type, object> _appliers = new();
         private static readonly ConcurrentDictionary<Type, IConfigGraphRegistrar> _registrars = new();
 
         /// <summary>
@@ -34,32 +34,52 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         }
 
         /// <summary>
-        ///     Registers the strongly typed property accessors for a configuration type.
+        ///     Registers the strongly typed value applier for a configuration type.
         /// </summary>
-        /// <param name="configType">The configuration type the accessors describe.</param>
-        /// <param name="accessors">The property accessors for the configuration type.</param>
+        /// <param name="configType">The configuration type the applier updates.</param>
+        /// <param name="applier">The generated <see cref="IConfigValueApplier{T}" /> for the configuration type.</param>
         /// <exception cref="ArgumentNullException">The <paramref name="configType" /> parameter is <c>null</c>.</exception>
-        /// <exception cref="ArgumentNullException">The <paramref name="accessors" /> parameter is <c>null</c>.</exception>
-        public static void RegisterProperties(Type configType, ConfigPropertyAccessor[] accessors)
+        /// <exception cref="ArgumentNullException">The <paramref name="applier" /> parameter is <c>null</c>.</exception>
+        public static void RegisterApplier(Type configType, object applier)
         {
             _ = configType ?? throw new ArgumentNullException(nameof(configType));
-            _ = accessors ?? throw new ArgumentNullException(nameof(accessors));
+            _ = applier ?? throw new ArgumentNullException(nameof(applier));
 
-            _properties[configType] = accessors;
+            _appliers[configType] = applier;
         }
 
         /// <summary>
-        ///     Attempts to get the strongly typed property accessors registered for a configuration type.
+        ///     Attempts to get the strongly typed value applier registered for a configuration type.
+        /// </summary>
+        /// <typeparam name="T">The configuration type to look up.</typeparam>
+        /// <param name="applier">When this method returns, contains the registered applier if found; otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if an applier was registered for <typeparamref name="T" />; otherwise <c>false</c>.</returns>
+        public static bool TryGetApplier<T>(out IConfigValueApplier<T>? applier)
+        {
+            if (_appliers.TryGetValue(typeof(T), out var registered))
+            {
+                applier = (IConfigValueApplier<T>)registered;
+
+                return true;
+            }
+
+            applier = null;
+
+            return false;
+        }
+
+        /// <summary>
+        ///     Attempts to get the value applier registered for a configuration type.
         /// </summary>
         /// <param name="configType">The configuration type to look up.</param>
-        /// <param name="accessors">When this method returns, contains the registered accessors if found; otherwise <c>null</c>.</param>
-        /// <returns><c>true</c> if accessors were registered for <paramref name="configType" />; otherwise <c>false</c>.</returns>
+        /// <param name="applier">When this method returns, contains the registered applier if found; otherwise <c>null</c>.</param>
+        /// <returns><c>true</c> if an applier was registered for <paramref name="configType" />; otherwise <c>false</c>.</returns>
         /// <exception cref="ArgumentNullException">The <paramref name="configType" /> parameter is <c>null</c>.</exception>
-        public static bool TryGetProperties(Type configType, out ConfigPropertyAccessor[]? accessors)
+        public static bool TryGetApplier(Type configType, out object? applier)
         {
             _ = configType ?? throw new ArgumentNullException(nameof(configType));
 
-            return _properties.TryGetValue(configType, out accessors);
+            return _appliers.TryGetValue(configType, out applier);
         }
 
         /// <summary>

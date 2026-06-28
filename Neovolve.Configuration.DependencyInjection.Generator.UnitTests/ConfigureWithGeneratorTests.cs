@@ -95,18 +95,18 @@ namespace Sample
     }
 
     [Fact]
-    public void GeneratesReadOnlyAccessorWithoutSetter()
+    public void GeneratesReadOnlyReportForComputedProperty()
     {
         var harness = GeneratorTestHarness.Run(NestedGraphSource);
 
         var generated = harness.GeneratedSources[0];
 
-        // The computed Timeout property is read only, so its accessor is registered with a null setter.
-        generated.Should().Contain("\"Timeout\", false, true,");
+        // The computed Timeout property is read only, so the applier reports it rather than copying it.
+        generated.Should().Contain("context.ReportReadOnly(\"Timeout\", true);");
     }
 
     [Fact]
-    public void ModuleInitializerRegistersAccessorsThatCopyValues()
+    public void ModuleInitializerRegistersApplierThatCopiesValues()
     {
         var harness = GeneratorTestHarness.Run(NestedGraphSource);
 
@@ -116,19 +116,16 @@ namespace Sample
 
         var thirdConfigType = assembly.GetType("Sample.ThirdConfig", true)!;
 
-        GeneratedConfigRegistry.TryGetProperties(thirdConfigType, out var accessors).Should().BeTrue();
-        accessors.Should().NotBeNull();
+        var applier = ResolveApplier(thirdConfigType);
 
-        var thirdValue = accessors!.Single(accessor => accessor.Name == "ThirdValue");
-        thirdValue.CanWrite.Should().BeTrue();
+        var injected = Activator.CreateInstance(thirdConfigType)!;
+        var updated = Activator.CreateInstance(thirdConfigType)!;
 
-        var source = Activator.CreateInstance(thirdConfigType)!;
-        var target = Activator.CreateInstance(thirdConfigType)!;
+        thirdConfigType.GetProperty("ThirdValue")!.SetValue(updated, "updated");
 
-        thirdValue.SetValue!(source, "updated");
-        thirdValue.SetValue!(target, thirdValue.GetValue(source));
+        InvokeApply(applier, injected, updated);
 
-        thirdValue.GetValue(target).Should().Be("updated");
+        thirdConfigType.GetProperty("ThirdValue")!.GetValue(injected).Should().Be("updated");
     }
 
     [Fact]
@@ -205,8 +202,8 @@ namespace Sample
 
         var standaloneType = assembly.GetType("Sample.StandaloneConfig", true)!;
 
-        GeneratedConfigRegistry.TryGetProperties(standaloneType, out var accessors).Should().BeTrue();
-        accessors!.Single(accessor => accessor.Name == "Value").CanWrite.Should().BeTrue();
+        GeneratedConfigRegistry.TryGetApplier(standaloneType, out var applier).Should().BeTrue();
+        applier.Should().NotBeNull();
 
         // A type that is only attribute-marked is not a ConfigureWith root, so no registrar is produced.
         GeneratedConfigRegistry.TryGetRegistrar(standaloneType, out _).Should().BeFalse();
@@ -237,14 +234,17 @@ namespace Sample
 
         harness.CompilationErrors.Should().BeEmpty();
 
+        var generated = harness.GeneratedSources[0];
+
+        // The Value property is read only, so the applier reports it rather than copying it.
+        generated.Should().Contain("context.ReportReadOnly(\"Value\", true);");
+
         var assembly = harness.EmitAndLoad();
 
         var closedType = assembly.GetType("Sample.ReadOnlyHolder`1", true)!.MakeGenericType(typeof(string));
 
-        GeneratedConfigRegistry.TryGetProperties(closedType, out var accessors).Should().BeTrue();
-
-        // The Value property is read only, so its accessor cannot be written.
-        accessors!.Single(accessor => accessor.Name == "Value").CanWrite.Should().BeFalse();
+        GeneratedConfigRegistry.TryGetApplier(closedType, out var applier).Should().BeTrue();
+        applier.Should().NotBeNull();
     }
 
     [Fact]
@@ -311,5 +311,38 @@ namespace Sample
         var harness = GeneratorTestHarness.Run(NestedGraphSource);
 
         harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI001");
+    }
+
+    private static void InvokeApply(object applier, object injected, object updated)
+    {
+        var applyMethod = applier.GetType().GetMethod("Apply")!;
+
+        applyMethod.Invoke(applier, new[] { injected, updated, new StubConfigUpdateContext() });
+    }
+
+    private static object ResolveApplier(Type configType)
+    {
+        GeneratedConfigRegistry.TryGetApplier(configType, out var applier).Should().BeTrue();
+        applier.Should().NotBeNull();
+
+        return applier!;
+    }
+
+    private sealed class StubConfigUpdateContext : IConfigUpdateContext
+    {
+        public bool Report(string propertyPath, object? previousValue, object? updatedValue)
+        {
+            return false;
+        }
+
+        public void ReportCopyFailure(string propertyName, Exception exception)
+        {
+        }
+
+        public void ReportReadOnly(string propertyPath, bool isValueType)
+        {
+        }
+
+        public bool IsChangeLoggingEnabled => false;
     }
 }
