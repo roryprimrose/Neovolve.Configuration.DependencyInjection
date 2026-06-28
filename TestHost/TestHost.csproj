@@ -5,6 +5,10 @@
     <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Emit source-generator output to disk so the generated configuration registration code can be reviewed. -->
+    <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)GeneratedFiles</CompilerGeneratedFilesOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,6 +17,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection\Neovolve.Configuration.DependencyInjection.csproj" />
+    <!-- Run the source generator over this host so the generated configuration code can be reviewed. -->
+    <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection.Generator\Neovolve.Configuration.DependencyInjection.Generator.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
