@@ -378,6 +378,101 @@ namespace Sample
         harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI001");
     }
 
+    [Fact]
+    public void ExcludesPropertyAndTypeMarkedToSkip()
+    {
+        const string source = @"
+namespace Sample
+{
+    using Microsoft.Extensions.Hosting;
+    using Neovolve.Configuration.DependencyInjection.Generated;
+
+    [SkipConfigType]
+    public sealed class IgnoredType
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    public sealed class RootConfig
+    {
+        public string Kept { get; set; } = string.Empty;
+
+        [SkipConfigProperty]
+        public string Skipped { get; set; } = string.Empty;
+
+        public IgnoredType Ignored { get; set; } = new();
+    }
+
+    public static class Caller
+    {
+        public static void Configure(Microsoft.Extensions.Hosting.IHostBuilder builder)
+        {
+            builder.ConfigureWith<RootConfig>();
+        }
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var generated = harness.GeneratedSources[0];
+
+        // The kept property is still applied.
+        generated.Should().Contain("context.ReportValue(\"Kept\", previous, current)");
+
+        // The [SkipConfigProperty] property is excluded entirely.
+        generated.Should().NotContain("\"Skipped\"");
+
+        // The [SkipConfigType] property and its type are excluded entirely.
+        generated.Should().NotContain("\"Ignored\"");
+        generated.Should().NotContain("Sample.IgnoredType");
+    }
+
+    [Fact]
+    public void ExcludesTypeMarkedAtAssemblyLevelWithSkipConfigType()
+    {
+        const string source = @"
+using Neovolve.Configuration.DependencyInjection.Generated;
+
+[assembly: SkipConfigType(typeof(Sample.Excluded))]
+
+namespace Sample
+{
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class Excluded
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    public sealed class RootConfig
+    {
+        public string Kept { get; set; } = string.Empty;
+
+        public Excluded Item { get; set; } = new();
+    }
+
+    public static class Caller
+    {
+        public static void Configure(Microsoft.Extensions.Hosting.IHostBuilder builder)
+        {
+            builder.ConfigureWith<RootConfig>();
+        }
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var generated = harness.GeneratedSources[0];
+
+        generated.Should().Contain("context.ReportValue(\"Kept\", previous, current)");
+        generated.Should().NotContain("\"Item\"");
+        generated.Should().NotContain("Sample.Excluded");
+    }
+
     private static void InvokeApply(object applier, object injected, object updated)
     {
         var applyMethod = applier.GetType().GetMethod("Apply")!;

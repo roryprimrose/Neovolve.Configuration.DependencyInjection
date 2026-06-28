@@ -1,9 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection
 {
-    using System;
-    using System.Collections;
-    using System.Collections.ObjectModel;
-    using System.Reflection;
     using Microsoft.Extensions.Logging;
 
     /// <summary>
@@ -33,9 +29,5 @@
 
         /// <inheritdoc />
         public bool ReloadInjectedRawTypes { get; set; } = true;
-
-        /// <inheritdoc />
-        public Collection<Type> SkipPropertyTypes { get; } =
-            [typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)];
     }
 }

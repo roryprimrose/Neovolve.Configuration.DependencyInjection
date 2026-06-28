@@ -2,6 +2,7 @@
 {
     using System.Collections.ObjectModel;
     using System.Diagnostics.CodeAnalysis;
+    using Neovolve.Configuration.DependencyInjection.Generated;
 
     internal class EmptyClass
     {
@@ -99,6 +100,14 @@
     internal class DeepRoot
     {
         public Collection<DeepItem> Items { get; set; } = new();
+    }
+
+    internal class SkipPropertyType
+    {
+        public string Kept { get; set; } = string.Empty;
+
+        [SkipConfigProperty]
+        public string Ignored { get; set; } = string.Empty;
     }
 
     internal record ChildRecord(string Name, int Start, bool End);

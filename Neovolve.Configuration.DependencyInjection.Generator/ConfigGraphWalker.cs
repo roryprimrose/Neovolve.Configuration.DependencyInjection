@@ -14,6 +14,12 @@ internal static class ConfigGraphWalker
 {
     private static readonly SymbolDisplayFormat _fullyQualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
+    private const string SkipPropertyAttributeName =
+        "Neovolve.Configuration.DependencyInjection.Generated.SkipConfigPropertyAttribute";
+
+    private const string SkipTypeAttributeName =
+        "Neovolve.Configuration.DependencyInjection.Generated.SkipConfigTypeAttribute";
+
     public static RootModel WalkRoot(INamedTypeSymbol root, Compilation compilation, LocationInfo? invocationLocation,
         CancellationToken cancellationToken)
     {
@@ -24,23 +30,27 @@ internal static class ConfigGraphWalker
 
         var skipTypes = new List<INamedTypeSymbol?> { enumerableType, typeType, assemblyType, streamType };
 
+        // Types and properties marked for exclusion by the [SkipConfigType] and [SkipConfigProperty] attributes are
+        // removed from the graph entirely (not registered, copied or logged).
+        var excludedTypes = GetExcludedTypes(compilation);
+
         var rootName = root.ToDisplayString(_fullyQualifiedFormat);
         var configTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
         var registrations = ImmutableArray.CreateBuilder<ChildRegistrationModel>();
         var deepTypes = new List<INamedTypeSymbol>();
 
-        configTypes[rootName] = BuildConfigType(root, compilation, skipTypes, false, deepTypes);
+        configTypes[rootName] = BuildConfigType(root, compilation, skipTypes, excludedTypes, false, deepTypes);
 
         var rootInterfaces = GetAccessibleInterfaces(root, compilation);
 
         var ancestors = new HashSet<string>(StringComparer.Ordinal) { rootName };
 
-        WalkChildren(root, string.Empty, compilation, skipTypes, configTypes, registrations, ancestors, deepTypes,
-            cancellationToken);
+        WalkChildren(root, string.Empty, compilation, skipTypes, excludedTypes, configTypes, registrations, ancestors,
+            deepTypes, cancellationToken);
 
         // Report-only types are the complex element types of indexable lists (and their reachable graph) that are not
         // registered configuration types. They get a Report function for deep nested logging but no applier.
-        WalkReportOnlyTypes(compilation, skipTypes, configTypes, deepTypes, cancellationToken);
+        WalkReportOnlyTypes(compilation, skipTypes, excludedTypes, configTypes, deepTypes, cancellationToken);
 
         return new RootModel(
             rootName,
@@ -61,13 +71,20 @@ internal static class ConfigGraphWalker
     }
 
     private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type, Compilation compilation,
-        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, bool isReportOnly, List<INamedTypeSymbol> deepTypes)
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, ImmutableHashSet<INamedTypeSymbol> excludedTypes,
+        bool isReportOnly, List<INamedTypeSymbol> deepTypes)
     {
         var typeName = type.ToDisplayString(_fullyQualifiedFormat);
         var propertyModels = ImmutableArray.CreateBuilder<ConfigPropertyModel>();
 
         foreach (var property in GetBindableProperties(type))
         {
+            if (IsExcludedProperty(property, compilation, excludedTypes))
+            {
+                // The property is excluded from the configuration graph, so it is not copied or logged.
+                continue;
+            }
+
             var propertyTypeName = property.Type.ToDisplayString(_fullyQualifiedFormat);
             var canWrite = property.SetMethod != null
                 && property.SetMethod.DeclaredAccessibility == Accessibility.Public
@@ -90,8 +107,9 @@ internal static class ConfigGraphWalker
     }
 
     private static void WalkReportOnlyTypes(Compilation compilation,
-        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, Dictionary<string, ConfigTypeModel> configTypes,
-        List<INamedTypeSymbol> seedTypes, CancellationToken cancellationToken)
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, ImmutableHashSet<INamedTypeSymbol> excludedTypes,
+        Dictionary<string, ConfigTypeModel> configTypes, List<INamedTypeSymbol> seedTypes,
+        CancellationToken cancellationToken)
     {
         var queue = new Queue<INamedTypeSymbol>(seedTypes);
 
@@ -110,7 +128,7 @@ internal static class ConfigGraphWalker
 
             var discovered = new List<INamedTypeSymbol>();
 
-            configTypes[name] = BuildConfigType(type, compilation, skipTypes, true, discovered);
+            configTypes[name] = BuildConfigType(type, compilation, skipTypes, excludedTypes, true, discovered);
 
             foreach (var child in discovered)
             {
@@ -236,6 +254,89 @@ internal static class ConfigGraphWalker
     private static bool IsScalar(ITypeSymbol type)
     {
         return type.IsValueType || type.SpecialType == SpecialType.System_String;
+    }
+
+    private static ImmutableHashSet<INamedTypeSymbol> GetExcludedTypes(Compilation compilation)
+    {
+        var builder = ImmutableHashSet.CreateBuilder<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var attributeType = compilation.GetTypeByMetadataName(SkipTypeAttributeName);
+
+        if (attributeType == null)
+        {
+            return builder.ToImmutable();
+        }
+
+        foreach (var attribute in compilation.Assembly.GetAttributes())
+        {
+            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType) == false)
+            {
+                continue;
+            }
+
+            foreach (var argument in attribute.ConstructorArguments)
+            {
+                if (argument.Kind != TypedConstantKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var element in argument.Values)
+                {
+                    if (element.Value is INamedTypeSymbol named)
+                    {
+                        builder.Add(named);
+                    }
+                }
+            }
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private static bool IsExcludedProperty(IPropertySymbol property, Compilation compilation,
+        ImmutableHashSet<INamedTypeSymbol> excludedTypes)
+    {
+        var skipPropertyType = compilation.GetTypeByMetadataName(SkipPropertyAttributeName);
+
+        if (skipPropertyType != null
+            && HasAttribute(property, skipPropertyType))
+        {
+            return true;
+        }
+
+        return IsExcludedType(property.Type, compilation, excludedTypes);
+    }
+
+    private static bool IsExcludedType(ITypeSymbol type, Compilation compilation,
+        ImmutableHashSet<INamedTypeSymbol> excludedTypes)
+    {
+        if (type is not INamedTypeSymbol named)
+        {
+            return false;
+        }
+
+        if (excludedTypes.Contains(named)
+            || excludedTypes.Contains(named.OriginalDefinition))
+        {
+            return true;
+        }
+
+        var skipType = compilation.GetTypeByMetadataName(SkipTypeAttributeName);
+
+        return skipType != null && HasAttribute(named, skipType);
+    }
+
+    private static bool HasAttribute(ISymbol symbol, INamedTypeSymbol attributeType)
+    {
+        foreach (var attribute in symbol.GetAttributes())
+        {
+            if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, attributeType))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static ImmutableArray<string> GetAccessibleInterfaces(INamedTypeSymbol type, Compilation compilation)
@@ -394,6 +495,7 @@ internal static class ConfigGraphWalker
         string sectionPrefix,
         Compilation compilation,
         IReadOnlyCollection<INamedTypeSymbol?> skipTypes,
+        ImmutableHashSet<INamedTypeSymbol> excludedTypes,
         Dictionary<string, ConfigTypeModel> configTypes,
         ImmutableArray<ChildRegistrationModel>.Builder registrations,
         HashSet<string> ancestors,
@@ -406,6 +508,11 @@ internal static class ConfigGraphWalker
 
         foreach (var property in GetBindableProperties(owningType))
         {
+            if (IsExcludedProperty(property, compilation, excludedTypes))
+            {
+                continue;
+            }
+
             if (ShouldRecurse(property.Type, owningType, skipTypes) == false)
             {
                 continue;
@@ -421,15 +528,16 @@ internal static class ConfigGraphWalker
 
             if (configTypes.ContainsKey(childName) == false)
             {
-                configTypes[childName] = BuildConfigType(childType, compilation, skipTypes, false, deepTypes);
+                configTypes[childName] = BuildConfigType(childType, compilation, skipTypes, excludedTypes, false,
+                    deepTypes);
             }
 
             // Add the child to the current path to guard against cycles while still allowing the same type to
             // be registered at sibling paths.
             if (ancestors.Add(childName))
             {
-                WalkChildren(childType, sectionPath, compilation, skipTypes, configTypes, registrations, ancestors,
-                    deepTypes, cancellationToken);
+                WalkChildren(childType, sectionPath, compilation, skipTypes, excludedTypes, configTypes, registrations,
+                    ancestors, deepTypes, cancellationToken);
 
                 ancestors.Remove(childName);
             }

@@ -20,4 +20,5 @@ using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     typeof(ReadOnlyType<string>),
     typeof(ReadOnlyType<int>),
     typeof(ValueOnlyType),
-    typeof(DeepRoot))]
+    typeof(DeepRoot),
+    typeof(SkipPropertyType))]

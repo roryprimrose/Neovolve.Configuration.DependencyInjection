@@ -436,6 +436,28 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             logger.Entries.Should().NotContain(x => x.Message.Contains("Items"));
         }
 
+        [Fact]
+        public void UpdateConfigDoesNotCopySkippedProperty()
+        {
+            var injectedConfig = new SkipPropertyType
+            {
+                Kept = "kept-old",
+                Ignored = "ignored-old"
+            };
+            var updatedConfig = new SkipPropertyType
+            {
+                Kept = "kept-new",
+                Ignored = "ignored-new"
+            };
+            var name = Guid.NewGuid().ToString();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, Service<ILogger>());
+
+            // The kept property is copied; the [SkipConfigProperty] property is left unchanged.
+            injectedConfig.Kept.Should().Be("kept-new");
+            injectedConfig.Ignored.Should().Be("ignored-old");
+        }
+
         private DefaultConfigUpdater SUT => GetSUT<DefaultConfigUpdater>();
     }
 }
