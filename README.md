@@ -186,6 +186,13 @@ var builder = Host.CreateDefaultBuilder()
 # Source generator
 This package includes a Roslyn source generator that runs in the project that calls `ConfigureWith<T>`. At compile time it walks the configuration type graph from each `ConfigureWith<T>` root and emits the registration code plus a strongly typed value applier for each configuration type. Each applier assigns the updated property values directly onto the injected instance, so the library binds and hot reloads configuration without runtime reflection and without boxing value type properties on the update path. The generator ships with the package and requires no configuration.
 
+Because the generator knows each property's type at compile time, it also decides how a property change is logged (when change logging is enabled), without any runtime type inspection:
+
+- Scalar values (numbers, strings, enums, and so on) are logged as `from 'old' to 'new'`.
+- Collections of scalar values are logged as an entry count change, or as the individual element values that changed.
+- Collections of complex types are logged only as an entry count change, because logging each element would just repeat the element type name.
+- Child configuration types are assigned but not logged at the parent, because each child type is registered and logs its own changes independently.
+
 If you need a value applier generated for a configuration type that is not reachable from a `ConfigureWith<T>` root (for example a type you update through `IConfigUpdater` directly), mark it with `[GenerateConfigAccessors]`. The attribute can be applied to a class, or at the assembly level with one or more types (including closed generic types):
 
 ```csharp

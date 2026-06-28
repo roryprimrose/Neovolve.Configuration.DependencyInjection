@@ -6,12 +6,15 @@ namespace Neovolve.Configuration.DependencyInjection.Generator;
 /// </summary>
 internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
 {
-    public ConfigPropertyModel(string name, string typeFullyQualifiedName, bool canWrite, bool isValueType)
+    public ConfigPropertyModel(string name, string typeFullyQualifiedName, bool canWrite, bool isValueType,
+        PropertyChangeKind changeKind, string? elementTypeFullyQualifiedName)
     {
         Name = name;
         TypeFullyQualifiedName = typeFullyQualifiedName;
         CanWrite = canWrite;
         IsValueType = isValueType;
+        ChangeKind = changeKind;
+        ElementTypeFullyQualifiedName = elementTypeFullyQualifiedName;
     }
 
     public bool Equals(ConfigPropertyModel other)
@@ -19,7 +22,9 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
         return Name == other.Name
             && TypeFullyQualifiedName == other.TypeFullyQualifiedName
             && CanWrite == other.CanWrite
-            && IsValueType == other.IsValueType;
+            && IsValueType == other.IsValueType
+            && ChangeKind == other.ChangeKind
+            && ElementTypeFullyQualifiedName == other.ElementTypeFullyQualifiedName;
     }
 
     public override bool Equals(object? obj)
@@ -35,11 +40,17 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
         hash = (hash * 31) + TypeFullyQualifiedName.GetHashCode();
         hash = (hash * 31) + CanWrite.GetHashCode();
         hash = (hash * 31) + IsValueType.GetHashCode();
+        hash = (hash * 31) + ChangeKind.GetHashCode();
+        hash = (hash * 31) + (ElementTypeFullyQualifiedName?.GetHashCode() ?? 0);
 
         return hash;
     }
 
     public bool CanWrite { get; }
+
+    public PropertyChangeKind ChangeKind { get; }
+
+    public string? ElementTypeFullyQualifiedName { get; }
 
     public bool IsValueType { get; }
 

@@ -1,23 +1,30 @@
 namespace Neovolve.Configuration.DependencyInjection.Generated
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using Microsoft.Extensions.Logging;
-    using Neovolve.Configuration.DependencyInjection.Comparison;
 
     /// <summary>
     ///     The <see cref="ConfigUpdateContext" /> class is the default <see cref="IConfigUpdateContext" /> used by
-    ///     <see cref="DefaultConfigUpdater" /> to report configuration changes, read only properties and copy failures
-    ///     while a generated <see cref="IConfigValueApplier{T}" /> applies updated values.
+    ///     <see cref="DefaultConfigUpdater" /> to detect and log configuration changes while a generated
+    ///     <see cref="IConfigValueApplier{T}" /> applies updated values.
     /// </summary>
     internal sealed partial class ConfigUpdateContext : IConfigUpdateContext
     {
         private const string CopyValuesEventName =
             "Neovolve.Configuration.DependencyInjection.IConfigUpdater.UpdateConfig";
 
+        private const string ChangeMessagePrefix =
+            "Configuration updated on property {TargetType}.{PropertyPath} ";
+
+        private const string ValueChangeFormat = ChangeMessagePrefix + "from '{OldValue}' to '{NewValue}'";
+
+        private const string CountChangeFormat = ChangeMessagePrefix + "from {OldValue} entries to {NewValue} entries";
+
         private readonly ILogger? _logger;
         private readonly IConfigureWithOptions _options;
         private readonly Type _targetType;
-        private readonly IValueProcessor _valueProcessor;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="ConfigUpdateContext" /> class.
@@ -25,78 +32,120 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         /// <param name="targetType">The configuration type being updated.</param>
         /// <param name="logger">The optional logger used to record changes.</param>
         /// <param name="options">The options that control logging behaviour.</param>
-        /// <param name="valueProcessor">The value processor used to identify changes for logging.</param>
-        public ConfigUpdateContext(Type targetType, ILogger? logger, IConfigureWithOptions options,
-            IValueProcessor valueProcessor)
+        public ConfigUpdateContext(Type targetType, ILogger? logger, IConfigureWithOptions options)
         {
             _targetType = targetType;
             _logger = logger;
             _options = options;
-            _valueProcessor = valueProcessor;
         }
 
         /// <inheritdoc />
-        public bool Report<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
+        public bool ReportValue<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
         {
             if (_logger == null)
             {
                 return false;
             }
 
-            if (typeof(TValue).IsValueType)
+            try
             {
-                // Value types cannot be routed through the object based evaluator pipeline without boxing, and they are
-                // never collections, so the change is formatted and logged directly from the strongly typed values. The
-                // generated applier only calls this method once the values have already been found to differ.
-                try
+                if (EqualityComparer<TValue>.Default.Equals(previousValue, updatedValue))
                 {
-                    // Calling ToString directly (rather than via the null-conditional operator) keeps the call as a
-                    // constrained virtual call so the value type is not boxed.
-                    var valueChange = new IdentifiedChange(propertyPath, previousValue!.ToString() ?? string.Empty,
-                        updatedValue!.ToString() ?? string.Empty);
+                    return false;
+                }
 
-                    LogChange(_logger, valueChange);
-                }
-                catch (Exception ex)
-                {
-                    // Record this failure with a reference to raising a GitHub issue.
-                    LogConfigChangeFailed(_logger, _targetType, propertyPath, ex);
-                }
+                LogValueChange(propertyPath, Format(previousValue), Format(updatedValue));
 
                 return true;
             }
+            catch (Exception ex)
+            {
+                LogConfigChangeFailed(_logger, _targetType, propertyPath, ex);
 
-            var changed = false;
+                return false;
+            }
+        }
+
+        /// <inheritdoc />
+        public bool ReportValues<TItem>(string propertyPath, IReadOnlyList<TItem>? previousValues,
+            IReadOnlyList<TItem>? updatedValues)
+        {
+            if (_logger == null)
+            {
+                return false;
+            }
 
             try
             {
-                // A reference does not box when passed as object, so reference type values keep the full change
-                // evaluator pipeline (collection, dictionary and custom evaluators with nested property paths).
-                var changes = _valueProcessor.FindChanges(propertyPath, previousValue, updatedValue);
+                var previousCount = previousValues?.Count ?? 0;
+                var updatedCount = updatedValues?.Count ?? 0;
 
-                foreach (var change in changes)
+                if (previousCount != updatedCount)
                 {
-                    changed = true;
+                    LogCountChange(propertyPath, previousCount, updatedCount);
 
-                    LogChange(_logger, change);
+                    return true;
                 }
+
+                if (previousValues == null
+                    || updatedValues == null)
+                {
+                    return false;
+                }
+
+                var changed = false;
+
+                for (var index = 0; index < previousCount; index++)
+                {
+                    if (EqualityComparer<TItem>.Default.Equals(previousValues[index], updatedValues[index]))
+                    {
+                        continue;
+                    }
+
+                    LogValueChange($"{propertyPath}[{index}]", Format(previousValues[index]),
+                        Format(updatedValues[index]));
+
+                    changed = true;
+                }
+
+                return changed;
             }
             catch (Exception ex)
             {
-                // Record this failure with a reference to raising a GitHub issue.
                 LogConfigChangeFailed(_logger, _targetType, propertyPath, ex);
-            }
 
-            return changed;
+                return false;
+            }
         }
 
-        private void LogChange(ILogger logger, IdentifiedChange change)
+        /// <inheritdoc />
+        public bool ReportCount(string propertyPath, ICollection? previousValue, ICollection? updatedValue)
         {
-            var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+            if (_logger == null)
+            {
+                return false;
+            }
 
-            // A custom log format is required here, so the logging source generator is not used.
-            logger.Log(_options.LogPropertyChangeLevel, eventId, change.MessageFormat, _targetType,
-                change.PropertyPath, change.FirstLogValue, change.SecondLogValue);
+            try
+            {
+                var previousCount = previousValue?.Count ?? 0;
+                var updatedCount = updatedValue?.Count ?? 0;
+
+                if (previousCount == updatedCount)
+                {
+                    return false;
+                }
+
+                LogCountChange(propertyPath, previousCount, updatedCount);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogConfigChangeFailed(_logger, _targetType, propertyPath, ex);
+
+                return false;
+            }
         }
 
         /// <inheritdoc />
@@ -133,6 +182,38 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
             {
                 LogConfigCopyDenied(_logger, _options.LogReadOnlyPropertyLevel, _targetType, propertyPath);
             }
+        }
+
+        private static string Format<T>(T value)
+        {
+            if (typeof(T).IsValueType)
+            {
+                // A value type is never null and calling ToString directly is a constrained virtual call, so the
+                // value is not boxed.
+                return value!.ToString() ?? string.Empty;
+            }
+
+            // A reference is cast to object without boxing; the runtime treats the box of a reference type as a no-op.
+            var reference = (object?)value;
+
+            return reference == null ? "null" : reference.ToString() ?? "null";
+        }
+
+        private void LogCountChange(string propertyPath, int previousCount, int updatedCount)
+        {
+            var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+
+            _logger!.Log(_options.LogPropertyChangeLevel, eventId, CountChangeFormat, _targetType, propertyPath,
+                previousCount, updatedCount);
+        }
+
+        private void LogValueChange(string propertyPath, string previousValue, string updatedValue)
+        {
+            var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+
+            // A custom log format is required here, so the logging source generator is not used.
+            _logger!.Log(_options.LogPropertyChangeLevel, eventId, ValueChangeFormat, _targetType, propertyPath,
+                previousValue, updatedValue);
         }
 
         /// <inheritdoc />

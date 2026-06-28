@@ -28,7 +28,7 @@ internal static class ConfigGraphWalker
         var configTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
         var registrations = ImmutableArray.CreateBuilder<ChildRegistrationModel>();
 
-        configTypes[rootName] = BuildConfigType(root);
+        configTypes[rootName] = BuildConfigType(root, compilation, skipTypes);
 
         var rootInterfaces = GetAccessibleInterfaces(root, compilation);
 
@@ -55,7 +55,8 @@ internal static class ConfigGraphWalker
         return ImmutableArray.CreateRange(model.ConfigTypes);
     }
 
-    private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type)
+    private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type, Compilation compilation,
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes)
     {
         var typeName = type.ToDisplayString(_fullyQualifiedFormat);
         var propertyModels = ImmutableArray.CreateBuilder<ConfigPropertyModel>();
@@ -67,12 +68,109 @@ internal static class ConfigGraphWalker
                 && property.SetMethod.DeclaredAccessibility == Accessibility.Public
                 && property.SetMethod.IsInitOnly == false;
             var isValueType = property.Type.IsValueType || property.Type.SpecialType == SpecialType.System_String;
+            var changeKind = ClassifyChange(property, type, compilation, skipTypes, out var elementTypeName);
 
-            propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType));
+            propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType,
+                changeKind, elementTypeName));
         }
 
         return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()),
             type.IsValueType, LocationInfo.CreateFrom(type));
+    }
+
+    private static PropertyChangeKind ClassifyChange(IPropertySymbol property, INamedTypeSymbol owningType,
+        Compilation compilation, IReadOnlyCollection<INamedTypeSymbol?> skipTypes, out string? elementTypeName)
+    {
+        elementTypeName = null;
+
+        var type = property.Type;
+
+        if (ShouldRecurse(type, owningType, skipTypes))
+        {
+            // The property is a child configuration type that is registered and logged independently, so the parent
+            // assigns it but does not log it.
+            return PropertyChangeKind.ChildConfig;
+        }
+
+        var elementType = GetScalarListElementType(type, compilation);
+
+        if (elementType != null
+            && IsScalar(elementType))
+        {
+            elementTypeName = elementType.ToDisplayString(_fullyQualifiedFormat);
+
+            return PropertyChangeKind.ScalarList;
+        }
+
+        if (ImplementsNonGenericICollection(type, compilation))
+        {
+            return PropertyChangeKind.Countable;
+        }
+
+        return PropertyChangeKind.Scalar;
+    }
+
+    private static ITypeSymbol? GetScalarListElementType(ITypeSymbol type, Compilation compilation)
+    {
+        if (type is IArrayTypeSymbol array)
+        {
+            return array.ElementType;
+        }
+
+        var readOnlyListDef = compilation.GetTypeByMetadataName("System.Collections.Generic.IReadOnlyList`1");
+
+        if (readOnlyListDef == null)
+        {
+            return null;
+        }
+
+        if (type is INamedTypeSymbol namedType
+            && namedType.IsGenericType
+            && SymbolEqualityComparer.Default.Equals(namedType.OriginalDefinition, readOnlyListDef))
+        {
+            return namedType.TypeArguments[0];
+        }
+
+        foreach (var implemented in type.AllInterfaces)
+        {
+            if (implemented.IsGenericType
+                && SymbolEqualityComparer.Default.Equals(implemented.OriginalDefinition, readOnlyListDef))
+            {
+                return implemented.TypeArguments[0];
+            }
+        }
+
+        return null;
+    }
+
+    private static bool ImplementsNonGenericICollection(ITypeSymbol type, Compilation compilation)
+    {
+        if (type is IArrayTypeSymbol)
+        {
+            return true;
+        }
+
+        var collectionType = compilation.GetTypeByMetadataName("System.Collections.ICollection");
+
+        if (collectionType == null)
+        {
+            return false;
+        }
+
+        foreach (var implemented in type.AllInterfaces)
+        {
+            if (SymbolEqualityComparer.Default.Equals(implemented, collectionType))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsScalar(ITypeSymbol type)
+    {
+        return type.IsValueType || type.SpecialType == SpecialType.System_String;
     }
 
     private static ImmutableArray<string> GetAccessibleInterfaces(INamedTypeSymbol type, Compilation compilation)
@@ -257,7 +355,7 @@ internal static class ConfigGraphWalker
 
             if (configTypes.ContainsKey(childName) == false)
             {
-                configTypes[childName] = BuildConfigType(childType);
+                configTypes[childName] = BuildConfigType(childType, compilation, skipTypes);
             }
 
             // Add the child to the current path to guard against cycles while still allowing the same type to

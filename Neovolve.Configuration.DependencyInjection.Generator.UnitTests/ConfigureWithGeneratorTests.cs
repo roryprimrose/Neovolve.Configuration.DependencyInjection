@@ -76,6 +76,64 @@ namespace Sample
     }
 }";
 
+    private const string ClassificationGraphSource = @"
+namespace Sample
+{
+    using System.Collections.ObjectModel;
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class ChildItem
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    public sealed class ChildConfig
+    {
+        public string Setting { get; set; } = string.Empty;
+    }
+
+    public sealed class RootConfig
+    {
+        public int Count { get; set; }
+        public Collection<string> Names { get; set; } = new();
+        public Collection<ChildItem> Items { get; set; } = new();
+        public ChildConfig Child { get; set; } = new();
+    }
+
+    public static class Caller
+    {
+        public static void Configure(Microsoft.Extensions.Hosting.IHostBuilder builder)
+        {
+            builder.ConfigureWith<RootConfig>();
+        }
+    }
+}";
+
+    [Fact]
+    public void ClassifiesPropertiesIntoTypedChangeReports()
+    {
+        var harness = GeneratorTestHarness.Run(ClassificationGraphSource);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var generated = harness.GeneratedSources[0];
+
+        // Scalar value -> ReportValue.
+        generated.Should().Contain("context.ReportValue(\"Count\", previous, current)");
+
+        // Collection of scalars -> ReportValues (count or per-element diffs).
+        generated.Should().Contain("context.ReportValues(\"Names\", previous, current)");
+
+        // Collection of complex elements -> ReportCount (count only, no per-element noise).
+        generated.Should().Contain("context.ReportCount(\"Items\", previous, current)");
+
+        // Child configuration type -> assigned but not logged here (logged by its own applier).
+        generated.Should().Contain("injected.Child = updated.Child;");
+        generated.Should().NotContain("context.ReportValue(\"Child\"");
+        generated.Should().NotContain("context.ReportValues(\"Child\"");
+        generated.Should().NotContain("context.ReportCount(\"Child\"");
+    }
+
     [Fact]
     public void GeneratesAccessorsForRootAndNestedTypesThatCompile()
     {
@@ -330,7 +388,19 @@ namespace Sample
 
     private sealed class StubConfigUpdateContext : IConfigUpdateContext
     {
-        public bool Report<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
+        public bool ReportValue<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
+        {
+            return false;
+        }
+
+        public bool ReportValues<TItem>(string propertyPath, System.Collections.Generic.IReadOnlyList<TItem>? previousValues,
+            System.Collections.Generic.IReadOnlyList<TItem>? updatedValues)
+        {
+            return false;
+        }
+
+        public bool ReportCount(string propertyPath, System.Collections.ICollection? previousValue,
+            System.Collections.ICollection? updatedValue)
         {
             return false;
         }

@@ -1,7 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
 using Microsoft.Extensions.Logging;
-using Neovolve.Configuration.DependencyInjection.Comparison;
 using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
@@ -12,16 +11,13 @@ using Neovolve.Configuration.DependencyInjection.Generated;
 public partial class DefaultConfigUpdater : IConfigUpdater
 {
     private readonly IConfigureWithOptions _options;
-    private readonly IValueProcessor _valueProcessor;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="DefaultConfigUpdater" /> class.
     /// </summary>
-    /// <param name="valueProcessor">The value processor used to identify whether configuration values have changed.</param>
     /// <param name="options">The options for updating configuration values.</param>
-    public DefaultConfigUpdater(IValueProcessor valueProcessor, IConfigureWithOptions options)
+    public DefaultConfigUpdater(IConfigureWithOptions options)
     {
-        _valueProcessor = valueProcessor ?? throw new ArgumentNullException(nameof(valueProcessor));
         _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
@@ -48,10 +44,9 @@ public partial class DefaultConfigUpdater : IConfigUpdater
 
         var targetType = typeof(T);
 
-        // The context carries the logging policy and change detection services for this single update. The generated
-        // applier copies each writable property directly and reports changes, read only properties and copy failures
-        // back through the context.
-        var context = new ConfigUpdateContext(targetType, logger, _options, _valueProcessor);
+        // The context carries the logging policy for this single update. The generated applier copies each writable
+        // property directly and reports changes, read only properties and copy failures back through the context.
+        var context = new ConfigUpdateContext(targetType, logger, _options);
 
         // The IOptionsMonitor<T>.OnChange event gets triggered twice on a change notification for file based
         // configuration. The applier only reports a change the first time a value actually differs, so logging stays

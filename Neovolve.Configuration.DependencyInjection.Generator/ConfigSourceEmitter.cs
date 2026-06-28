@@ -16,8 +16,6 @@ internal static class ConfigSourceEmitter
 
     private const string ConfigurationType = "global::Microsoft.Extensions.Configuration.IConfiguration";
 
-    private const string EqualityComparerType = "global::System.Collections.Generic.EqualityComparer";
-
     private const string RegistrarInterfaceType =
         "global::Neovolve.Configuration.DependencyInjection.Generated.IConfigGraphRegistrar";
 
@@ -169,29 +167,52 @@ internal static class ConfigSourceEmitter
             return;
         }
 
-        // A writable property is copied directly. The get, set and equality check are wrapped per property so that a
-        // single faulty member cannot stop the rest of the configuration from updating, matching the resilience of the
-        // previous delegate based updater.
+        if (property.ChangeKind == PropertyChangeKind.ChildConfig)
+        {
+            // A child configuration type is assigned but not logged here; it is registered and logged independently
+            // by its own applier.
+            builder.AppendLine("            try");
+            builder.AppendLine("            {");
+            builder.Append("                injected.").Append(property.Name).Append(" = updated.")
+                .Append(property.Name).AppendLine(";");
+            builder.AppendLine("            }");
+            builder.AppendLine("            catch (global::System.Exception ex)");
+            builder.AppendLine("            {");
+            builder.Append("                context.ReportCopyFailure(\"").Append(property.Name)
+                .AppendLine("\", ex);");
+            builder.AppendLine("            }");
+
+            return;
+        }
+
+        var reportCall = property.ChangeKind switch
+        {
+            PropertyChangeKind.ScalarList => "ReportValues",
+            PropertyChangeKind.Countable => "ReportCount",
+            _ => "ReportValue"
+        };
+
+        // A writable property is copied directly. The get, set and change report are wrapped per property so that a
+        // single faulty member cannot stop the rest of the configuration from updating.
         builder.AppendLine("            {");
-        builder.AppendLine("                var report = false;");
         builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" previous = default;");
         builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" current = default;");
+        builder.AppendLine("                var copied = false;");
         builder.AppendLine("                try");
         builder.AppendLine("                {");
         builder.Append("                    previous = injected.").Append(property.Name).AppendLine(";");
         builder.Append("                    current = updated.").Append(property.Name).AppendLine(";");
         builder.Append("                    injected.").Append(property.Name).AppendLine(" = current;");
-        builder.Append("                    report = ").Append(EqualityComparerType).Append('<')
-            .Append(property.TypeFullyQualifiedName).AppendLine(">.Default.Equals(previous, current) == false;");
+        builder.AppendLine("                    copied = true;");
         builder.AppendLine("                }");
         builder.AppendLine("                catch (global::System.Exception ex)");
         builder.AppendLine("                {");
         builder.Append("                    context.ReportCopyFailure(\"").Append(property.Name).AppendLine("\", ex);");
         builder.AppendLine("                }");
-        builder.AppendLine("                if (report && context.IsChangeLoggingEnabled)");
+        builder.AppendLine("                if (copied && context.IsChangeLoggingEnabled)");
         builder.AppendLine("                {");
-        builder.Append("                    changed |= context.Report(\"").Append(property.Name)
-            .AppendLine("\", previous, current);");
+        builder.Append("                    changed |= context.").Append(reportCall).Append("(\"")
+            .Append(property.Name).AppendLine("\", previous, current);");
         builder.AppendLine("                }");
         builder.AppendLine("            }");
     }

@@ -5,11 +5,9 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
-    using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using Neovolve.Logging.Xunit;
     using NSubstitute;
-    using NSubstitute.ExceptionExtensions;
 
     public sealed class DefaultConfigUpdaterTests : TestsInternal
     {
@@ -21,19 +19,7 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         [Fact]
         public void ThrowsExceptionWithNullOptions()
         {
-            var valueProcessor = Substitute.For<IValueProcessor>();
-
-            var action = () => new DefaultConfigUpdater(valueProcessor, null!);
-
-            action.Should().Throw<ArgumentNullException>();
-        }
-
-        [Fact]
-        public void ThrowsExceptionWithNullValueProcessor()
-        {
-            var options = new ConfigureWithOptions();
-
-            var action = () => new DefaultConfigUpdater(null!, options);
+            var action = () => new DefaultConfigUpdater(null!);
 
             action.Should().Throw<ArgumentNullException>();
         }
@@ -137,13 +123,11 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             var injectedConfig = Model.Create<SimpleType>();
             var updatedConfig = Model.Create<SimpleType>();
             var name = Guid.NewGuid().ToString();
-            var changes = new IdentifiedChange[]{ Model.Create<IdentifiedChange>()};
 
             Use(new ConfigureWithOptions
             {
                 LogPropertyChangeLevel = logLevel
             });
-            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>()).Returns(changes);
 
             var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
 
@@ -268,34 +252,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Theory]
-        [InlineData(LogLevel.Critical)]
-        [InlineData(LogLevel.Debug)]
-        [InlineData(LogLevel.Error)]
-        [InlineData(LogLevel.Information)]
-        [InlineData(LogLevel.Trace)]
-        [InlineData(LogLevel.Warning)]
-        public void UpdateConfigLogsFailureToLogPropertyChangesWhenEnabled(LogLevel logLevel)
-        {
-            var injectedConfig = Model.Create<SimpleType>();
-            var updatedConfig = Model.Create<SimpleType>();
-            var name = Guid.NewGuid().ToString();
-
-            Use(new ConfigureWithOptions
-            {
-                LogPropertyChangeLevel = logLevel
-            });
-
-            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
-
-            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>())
-                .Throws(new TimeoutException());
-
-            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
-
-            logger.Entries.Should().Contain(x => x.EventId.Id == 5004 && x.LogLevel == LogLevel.Warning);
-        }
-
-        [Theory]
         [InlineData(null)]
         [InlineData("injected value")]
         public void UpdateConfigRetainsPropertyValueWhenBothValuesAreSame(string? value)
@@ -408,7 +364,7 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Fact]
-        public void UpdateConfigLogsValueTypeChangeWithoutUsingValueProcessor()
+        public void UpdateConfigLogsValueTypeChange()
         {
             var injectedConfig = new ValueOnlyType
             {
@@ -432,12 +388,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             // The value was copied and the change was logged.
             injectedConfig.Number.Should().Be(2);
             logger.Entries.Should().Contain(x => x.EventId.Id == 5000);
-
-            // A value type is formatted and logged directly, so the object based value processor is never consulted
-            // and the value is never boxed into it.
-            Service<IValueProcessor>()
-                .DidNotReceive()
-                .FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>());
         }
 
         private DefaultConfigUpdater SUT => GetSUT<DefaultConfigUpdater>();
