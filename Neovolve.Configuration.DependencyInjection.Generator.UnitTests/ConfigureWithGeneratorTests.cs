@@ -116,4 +116,38 @@ namespace Sample
 
         harness.GeneratedSources.Should().BeEmpty();
     }
+
+    [Fact]
+    public void GeneratesRegistrarWithNestedSectionPaths()
+    {
+        var harness = GeneratorTestHarness.Run(NestedGraphSource);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var generated = harness.GeneratedSources[0];
+
+        generated.Should().Contain("RegisterRoot<global::Sample.RootConfig>");
+        generated.Should().Contain(
+            "RegisterConfigType<global::Sample.FirstConfig>(services, configuration.GetSection(\"First\"))");
+        generated.Should().Contain(
+            "RegisterConfigType<global::Sample.SecondConfig>(services, configuration.GetSection(\"First:Second\"))");
+        generated.Should().Contain(
+            "RegisterConfigType<global::Sample.ThirdConfig>(services, configuration.GetSection(\"First:Second:Third\"))");
+        generated.Should().Contain("RegisterGraph(typeof(global::Sample.RootConfig)");
+    }
+
+    [Fact]
+    public void ModuleInitializerRegistersGraphRegistrar()
+    {
+        var harness = GeneratorTestHarness.Run(NestedGraphSource);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var assembly = harness.EmitAndLoad();
+
+        var rootConfigType = assembly.GetType("Sample.RootConfig", true)!;
+
+        GeneratedConfigRegistry.TryGetRegistrar(rootConfigType, out var registrar).Should().BeTrue();
+        registrar.Should().NotBeNull();
+    }
 }

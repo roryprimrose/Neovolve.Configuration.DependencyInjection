@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
 using Neovolve.Configuration.DependencyInjection.Comparison;
+using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
 ///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
@@ -87,7 +88,7 @@ public static class ConfigureWithExtensions
 
         configure(initialOptions);
 
-        return builder.ConfigureServices((_, services) =>
+        builder.ConfigureServices((_, services) =>
             {
                 // Add the options registration
                 services.AddSingleton(c =>
@@ -119,8 +120,19 @@ public static class ConfigureWithExtensions
 
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
-            })
-            .RegisterConfigurationRoot<T>(initialOptions);
+            });
+
+        if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar))
+        {
+            // The source generator has emitted a strongly typed registrar for this root type, so the
+            // configuration graph is registered without runtime reflection.
+            return builder.ConfigureServices((context, services) =>
+                registrar!.Register(services, context.Configuration));
+        }
+
+        // Fallback used while the source generator is being rolled out for root types that have not been
+        // generated yet.
+        return builder.RegisterConfigurationRoot<T>(initialOptions);
     }
 
     internal static IServiceCollection AddChangeTracking(this IServiceCollection services)

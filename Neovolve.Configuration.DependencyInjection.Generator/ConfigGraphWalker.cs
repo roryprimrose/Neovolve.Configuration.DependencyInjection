@@ -6,18 +6,15 @@ using System.Threading;
 using Microsoft.CodeAnalysis;
 
 /// <summary>
-///     The <see cref="ConfigGraphWalker" /> class walks the configuration type graph from a set of root types, mirroring
-///     the runtime type discovery so the generator can emit strongly typed accessors for every reachable configuration
-///     type.
+///     The <see cref="ConfigGraphWalker" /> class walks the configuration type graph from a <c>ConfigureWith&lt;T&gt;</c>
+///     root, mirroring the runtime type discovery so the generator can emit strongly typed accessors and registration code
+///     for every reachable configuration type.
 /// </summary>
 internal static class ConfigGraphWalker
 {
     private static readonly SymbolDisplayFormat _fullyQualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
-    public static ImmutableArray<ConfigTypeModel> Walk(
-        IReadOnlyCollection<INamedTypeSymbol> roots,
-        Compilation compilation,
-        CancellationToken cancellationToken)
+    public static RootModel WalkRoot(INamedTypeSymbol root, Compilation compilation, CancellationToken cancellationToken)
     {
         var enumerableType = compilation.GetTypeByMetadataName("System.Collections.IEnumerable");
         var typeType = compilation.GetTypeByMetadataName("System.Type");
@@ -26,50 +23,60 @@ internal static class ConfigGraphWalker
 
         var skipTypes = new List<INamedTypeSymbol?> { enumerableType, typeType, assemblyType, streamType };
 
-        var models = ImmutableArray.CreateBuilder<ConfigTypeModel>();
-        var visited = new HashSet<string>(StringComparer.Ordinal);
-        var queue = new Queue<INamedTypeSymbol>();
+        var rootName = root.ToDisplayString(_fullyQualifiedFormat);
+        var configTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
+        var registrations = ImmutableArray.CreateBuilder<ChildRegistrationModel>();
 
-        foreach (var root in roots)
+        configTypes[rootName] = BuildConfigType(root);
+
+        var rootInterfaces = GetAccessibleInterfaces(root, compilation);
+
+        var ancestors = new HashSet<string>(StringComparer.Ordinal) { rootName };
+
+        WalkChildren(root, string.Empty, compilation, skipTypes, configTypes, registrations, ancestors,
+            cancellationToken);
+
+        return new RootModel(
+            rootName,
+            new EquatableArray<string>(rootInterfaces),
+            new EquatableArray<ConfigTypeModel>(configTypes.Values.ToImmutableArray()),
+            new EquatableArray<ChildRegistrationModel>(registrations.ToImmutable()));
+    }
+
+    private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type)
+    {
+        var typeName = type.ToDisplayString(_fullyQualifiedFormat);
+        var propertyModels = ImmutableArray.CreateBuilder<ConfigPropertyModel>();
+
+        foreach (var property in GetBindableProperties(type))
         {
-            queue.Enqueue(root);
+            var propertyTypeName = property.Type.ToDisplayString(_fullyQualifiedFormat);
+            var canWrite = property.SetMethod != null
+                && property.SetMethod.DeclaredAccessibility == Accessibility.Public
+                && property.SetMethod.IsInitOnly == false;
+            var isValueType = property.Type.IsValueType || property.Type.SpecialType == SpecialType.System_String;
+
+            propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType));
         }
 
-        while (queue.Count > 0)
+        return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()));
+    }
+
+    private static ImmutableArray<string> GetAccessibleInterfaces(INamedTypeSymbol type, Compilation compilation)
+    {
+        var interfaces = ImmutableArray.CreateBuilder<string>();
+
+        foreach (var implemented in type.AllInterfaces)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var type = queue.Dequeue();
-            var typeName = type.ToDisplayString(_fullyQualifiedFormat);
-
-            if (visited.Add(typeName) == false)
+            if (compilation.IsSymbolAccessibleWithin(implemented, compilation.Assembly) == false)
             {
                 continue;
             }
 
-            var properties = GetBindableProperties(type);
-            var propertyModels = ImmutableArray.CreateBuilder<ConfigPropertyModel>();
-
-            foreach (var property in properties)
-            {
-                var propertyTypeName = property.Type.ToDisplayString(_fullyQualifiedFormat);
-                var canWrite = property.SetMethod != null
-                    && property.SetMethod.DeclaredAccessibility == Accessibility.Public
-                    && property.SetMethod.IsInitOnly == false;
-                var isValueType = property.Type.IsValueType || property.Type.SpecialType == SpecialType.System_String;
-
-                propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType));
-
-                if (ShouldRecurse(property.Type, type, skipTypes))
-                {
-                    queue.Enqueue((INamedTypeSymbol)property.Type);
-                }
-            }
-
-            models.Add(new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable())));
+            interfaces.Add(implemented.ToDisplayString(_fullyQualifiedFormat));
         }
 
-        return models.ToImmutable();
+        return interfaces.ToImmutable();
     }
 
     private static IEnumerable<IPropertySymbol> GetBindableProperties(INamedTypeSymbol type)
@@ -114,6 +121,41 @@ internal static class ConfigGraphWalker
         }
     }
 
+    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol target)
+    {
+        if (target.TypeKind == TypeKind.Interface)
+        {
+            if (SymbolEqualityComparer.Default.Equals(type, target))
+            {
+                return true;
+            }
+
+            foreach (var implemented in type.AllInterfaces)
+            {
+                if (SymbolEqualityComparer.Default.Equals(implemented, target))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        INamedTypeSymbol? current = type;
+
+        while (current != null)
+        {
+            if (SymbolEqualityComparer.Default.Equals(current, target))
+            {
+                return true;
+            }
+
+            current = current.BaseType;
+        }
+
+        return false;
+    }
+
     private static bool ShouldRecurse(ITypeSymbol propertyType, INamedTypeSymbol owningType,
         IReadOnlyCollection<INamedTypeSymbol?> skipTypes)
     {
@@ -150,38 +192,49 @@ internal static class ConfigGraphWalker
         return true;
     }
 
-    private static bool IsAssignableTo(INamedTypeSymbol type, INamedTypeSymbol target)
+    private static void WalkChildren(
+        INamedTypeSymbol owningType,
+        string sectionPrefix,
+        Compilation compilation,
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes,
+        Dictionary<string, ConfigTypeModel> configTypes,
+        ImmutableArray<ChildRegistrationModel>.Builder registrations,
+        HashSet<string> ancestors,
+        CancellationToken cancellationToken)
     {
-        if (target.TypeKind == TypeKind.Interface)
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var prefix = sectionPrefix.Length == 0 ? string.Empty : sectionPrefix + ":";
+
+        foreach (var property in GetBindableProperties(owningType))
         {
-            if (SymbolEqualityComparer.Default.Equals(type, target))
+            if (ShouldRecurse(property.Type, owningType, skipTypes) == false)
             {
-                return true;
+                continue;
             }
 
-            foreach (var implemented in type.AllInterfaces)
+            var childType = (INamedTypeSymbol)property.Type;
+            var childName = childType.ToDisplayString(_fullyQualifiedFormat);
+            var sectionPath = prefix + property.Name;
+            var interfaces = GetAccessibleInterfaces(childType, compilation);
+
+            registrations.Add(new ChildRegistrationModel(childName, sectionPath,
+                new EquatableArray<string>(interfaces)));
+
+            if (configTypes.ContainsKey(childName) == false)
             {
-                if (SymbolEqualityComparer.Default.Equals(implemented, target))
-                {
-                    return true;
-                }
+                configTypes[childName] = BuildConfigType(childType);
             }
 
-            return false;
+            // Add the child to the current path to guard against cycles while still allowing the same type to
+            // be registered at sibling paths.
+            if (ancestors.Add(childName))
+            {
+                WalkChildren(childType, sectionPath, compilation, skipTypes, configTypes, registrations, ancestors,
+                    cancellationToken);
+
+                ancestors.Remove(childName);
+            }
         }
-
-        INamedTypeSymbol? current = type;
-
-        while (current != null)
-        {
-            if (SymbolEqualityComparer.Default.Equals(current, target))
-            {
-                return true;
-            }
-
-            current = current.BaseType;
-        }
-
-        return false;
     }
 }

@@ -29,7 +29,7 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
             .CreateSyntaxProvider(
                 static (node, _) => IsCandidateInvocation(node),
                 static (syntaxContext, token) => Transform(syntaxContext, token))
-            .Where(static models => models.Count > 0);
+            .Where(static root => string.IsNullOrEmpty(root.RootTypeFullyQualifiedName) == false);
 
         var hasModuleInitializer = context.CompilationProvider.Select(
             static (compilation, _) => HasModuleInitializer(compilation));
@@ -42,22 +42,19 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
 
     private static void Execute(
         SourceProductionContext context,
-        ImmutableArray<EquatableArray<ConfigTypeModel>> models,
+        ImmutableArray<RootModel> roots,
         bool hasModuleInitializer)
     {
-        if (models.IsDefaultOrEmpty)
+        if (roots.IsDefaultOrEmpty)
         {
             return;
         }
 
-        var distinct = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
+        var distinct = new Dictionary<string, RootModel>(StringComparer.Ordinal);
 
-        foreach (var set in models)
+        foreach (var root in roots)
         {
-            foreach (var model in set)
-            {
-                distinct[model.FullyQualifiedName] = model;
-            }
+            distinct[root.RootTypeFullyQualifiedName] = root;
         }
 
         if (distinct.Count == 0)
@@ -65,11 +62,7 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
             return;
         }
 
-        var ordered = distinct.Values
-            .OrderBy(static model => model.FullyQualifiedName, StringComparer.Ordinal)
-            .ToImmutableArray();
-
-        var source = AccessorSourceEmitter.Emit(ordered, hasModuleInitializer);
+        var source = ConfigSourceEmitter.Emit(distinct.Values.ToImmutableArray(), hasModuleInitializer);
 
         context.AddSource("NeovolveConfigurationBinders.g.cs", source);
     }
@@ -92,32 +85,28 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
         };
     }
 
-    private static EquatableArray<ConfigTypeModel> Transform(GeneratorSyntaxContext context, CancellationToken token)
+    private static RootModel Transform(GeneratorSyntaxContext context, CancellationToken token)
     {
-        var empty = new EquatableArray<ConfigTypeModel>(ImmutableArray<ConfigTypeModel>.Empty);
-
         var invocation = (InvocationExpressionSyntax)context.Node;
 
         if (context.SemanticModel.GetSymbolInfo(invocation, token).Symbol is not IMethodSymbol method)
         {
-            return empty;
+            return default;
         }
 
         if (method.Name != ConfigureWithMethodName
             || method.ContainingType?.Name != ConfigureWithTypeName
             || method.TypeArguments.Length != 1)
         {
-            return empty;
+            return default;
         }
 
         if (method.TypeArguments[0] is not INamedTypeSymbol rootType
             || rootType.TypeKind != TypeKind.Class)
         {
-            return empty;
+            return default;
         }
 
-        var models = ConfigGraphWalker.Walk(new[] { rootType }, context.SemanticModel.Compilation, token);
-
-        return new EquatableArray<ConfigTypeModel>(models);
+        return ConfigGraphWalker.WalkRoot(rootType, context.SemanticModel.Compilation, token);
     }
 }
