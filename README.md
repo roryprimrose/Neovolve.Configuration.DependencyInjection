@@ -147,7 +147,7 @@ The following are the default options that `ConfigureWith<T>` uses.
 | LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyType | `LogReadOnlyPropertyType` | `LogReadOnlyPropertyType.ValueTypesOnly` | The types of read-only properties to log when they are updated. Supported values are `All`, `ValueTypesOnly` and `None.` |
 | ReloadInjectedRawTypes | `bool` | `true` | Determines if raw types that are injected into the configuration system should be reloaded when the configuration changes |
-| SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that should be skipped when registering configuration sections. |
+| SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that are skipped when walking the configuration graph. The configuration graph is resolved at compile time by the source generator using the default values of this option, so adding types to it at runtime does not change which configuration sections are registered. |
 
 These options can be set in the `ConfigureWith<T>` overload.
 
@@ -163,6 +163,17 @@ var builder = Host.CreateDefaultBuilder()
     });
 ```
 
+# Source generator
+This package includes a Roslyn source generator that runs in the project that calls `ConfigureWith<T>`. At compile time it walks the configuration type graph from each `ConfigureWith<T>` root and emits the registration and value-copy code, so the library binds and hot reloads configuration without runtime reflection. The generator ships with the package and requires no configuration.
+
+If you need accessors for a configuration type that is not reachable from a `ConfigureWith<T>` root (for example a type you update through `IConfigUpdater` directly), mark it with `[GenerateConfigAccessors]`. The attribute can be applied to a class, or at the assembly level with one or more types (including closed generic types):
+
+```csharp
+using Neovolve.Configuration.DependencyInjection.Generated;
+
+[assembly: GenerateConfigAccessors(typeof(StandaloneConfig), typeof(Holder<string>))]
+```
+
 # Recommendations
 
 ## Use read-only interface definitions for configuration types
@@ -171,7 +182,7 @@ Configuration class definitions require that properties are mutable to allow the
 The `ConfigureWith<T>` extension method supports this by registering any configuration interfaces found under the root configuration class.
 
 ## Properties for child configuration types should be classes
-Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method uses reflection to walk the type hierarchy from the root configuration type by finding and recursing through all the properties.
+Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method walks the type hierarchy from the root configuration type at compile time using a source generator, finding and recursing through all the properties.
 
 For example, if the `First` property on `RootConfig` above was defined as `IFirstConfig` rather than `FirstConfig` then the `Second` property on `FirstConfig` would not be found and registered as a service. This is because the `IFirstConfig` does not define the `Second` property but `FirstConfig` does.
 
