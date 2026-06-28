@@ -7,7 +7,7 @@ using Neovolve.Configuration.DependencyInjection;
 using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 using Xunit;
 
-public class ConfigureWithServiceCollectionExtensionsTests
+public class ServiceCollectionExtensionsTests
 {
     [Theory]
     [InlineData(true)]
@@ -85,7 +85,7 @@ public class ConfigureWithServiceCollectionExtensionsTests
     {
         var configuration = BuildConfiguration();
 
-        var action = () => ConfigureWithServiceCollectionExtensions.ConfigureWith<Config>(null!, configuration);
+        var action = () => ServiceCollectionExtensions.ConfigureWith<Config>(null!, configuration);
 
         action.Should().Throw<ArgumentNullException>();
     }

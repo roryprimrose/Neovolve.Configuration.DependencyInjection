@@ -12,7 +12,7 @@ using Neovolve.Configuration.DependencyInjection;
 using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
-///     The <see cref="ConfigureWithServiceCollectionExtensions" /> class provides <see cref="IServiceCollection" />
+///     The <see cref="ServiceCollectionExtensions" /> class provides <see cref="IServiceCollection" />
 ///     methods for configuring dependency injection of strong typed configuration types with support for hot reloading
 ///     configuration changes.
 /// </summary>
@@ -20,7 +20,7 @@ using Neovolve.Configuration.DependencyInjection.Generated;
 ///     These overloads are an alternative to the <c>IHostBuilder</c> extension methods for scenarios that work directly
 ///     with an <see cref="IServiceCollection" /> and an <see cref="IConfiguration" /> (for example minimal hosting).
 /// </remarks>
-public static class ConfigureWithServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
     /// <summary>
     ///     The <see cref="ConfigureWith{T}(IServiceCollection, IConfiguration)" /> method registers configuration binding of
