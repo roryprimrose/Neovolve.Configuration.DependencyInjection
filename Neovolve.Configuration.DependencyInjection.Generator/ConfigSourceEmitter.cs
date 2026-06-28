@@ -28,7 +28,8 @@ internal static class ConfigSourceEmitter
     private const string SupportType =
         "global::Neovolve.Configuration.DependencyInjection.Generated.GeneratedConfigSupport";
 
-    public static string Emit(ImmutableArray<RootModel> roots, bool hasModuleInitializer)
+    public static string Emit(ImmutableArray<RootModel> roots, ImmutableArray<ConfigTypeModel> extraAccessorTypes,
+        bool hasModuleInitializer)
     {
         var distinctTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
 
@@ -38,6 +39,11 @@ internal static class ConfigSourceEmitter
             {
                 distinctTypes[configType.FullyQualifiedName] = configType;
             }
+        }
+
+        foreach (var configType in extraAccessorTypes)
+        {
+            distinctTypes[configType.FullyQualifiedName] = configType;
         }
 
         var orderedTypes = distinctTypes.Values

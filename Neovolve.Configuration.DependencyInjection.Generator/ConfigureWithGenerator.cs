@@ -19,6 +19,9 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
 
     private const string ConfigureWithTypeName = "ConfigureWithExtensions";
 
+    private const string GenerateAccessorsAttributeName =
+        "Neovolve.Configuration.DependencyInjection.Generated.GenerateConfigAccessorsAttribute";
+
     /// <inheritdoc />
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -31,38 +34,63 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                 static (syntaxContext, token) => Transform(syntaxContext, token))
             .Where(static root => string.IsNullOrEmpty(root.RootTypeFullyQualifiedName) == false);
 
+        // [GenerateConfigAccessors] requests accessors for types that are not reachable from a ConfigureWith<T>
+        // root, including closed generic types named at the assembly level.
+        var perAttribute = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                GenerateAccessorsAttributeName,
+                static (_, _) => true,
+                static (attributeContext, token) => TransformAttribute(attributeContext, token))
+            .Where(static types => types.Count > 0);
+
         var hasModuleInitializer = context.CompilationProvider.Select(
             static (compilation, _) => HasModuleInitializer(compilation));
 
-        var collected = perInvocation.Collect().Combine(hasModuleInitializer);
+        var collected = perInvocation.Collect()
+            .Combine(perAttribute.Collect())
+            .Combine(hasModuleInitializer);
 
         context.RegisterSourceOutput(collected, static (productionContext, input) =>
-            Execute(productionContext, input.Left, input.Right));
+            Execute(productionContext, input.Left.Left, input.Left.Right, input.Right));
     }
 
     private static void Execute(
         SourceProductionContext context,
         ImmutableArray<RootModel> roots,
+        ImmutableArray<EquatableArray<ConfigTypeModel>> attributeTypes,
         bool hasModuleInitializer)
     {
-        if (roots.IsDefaultOrEmpty)
+        if (roots.IsDefaultOrEmpty && attributeTypes.IsDefaultOrEmpty)
         {
             return;
         }
 
-        var distinct = new Dictionary<string, RootModel>(StringComparer.Ordinal);
+        var distinctRoots = new Dictionary<string, RootModel>(StringComparer.Ordinal);
 
         foreach (var root in roots)
         {
-            distinct[root.RootTypeFullyQualifiedName] = root;
+            distinctRoots[root.RootTypeFullyQualifiedName] = root;
         }
 
-        if (distinct.Count == 0)
+        var extraTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
+
+        foreach (var set in attributeTypes)
+        {
+            foreach (var configType in set)
+            {
+                extraTypes[configType.FullyQualifiedName] = configType;
+            }
+        }
+
+        if (distinctRoots.Count == 0 && extraTypes.Count == 0)
         {
             return;
         }
 
-        var source = ConfigSourceEmitter.Emit(distinct.Values.ToImmutableArray(), hasModuleInitializer);
+        var source = ConfigSourceEmitter.Emit(
+            distinctRoots.Values.ToImmutableArray(),
+            extraTypes.Values.ToImmutableArray(),
+            hasModuleInitializer);
 
         context.AddSource("NeovolveConfigurationBinders.g.cs", source);
     }
@@ -108,5 +136,56 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
         }
 
         return ConfigGraphWalker.WalkRoot(rootType, context.SemanticModel.Compilation, token);
+    }
+
+    private static EquatableArray<ConfigTypeModel> TransformAttribute(GeneratorAttributeSyntaxContext context,
+        CancellationToken token)
+    {
+        var compilation = context.SemanticModel.Compilation;
+        var collected = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
+
+        var explicitTypes = new List<INamedTypeSymbol>();
+
+        foreach (var attribute in context.Attributes)
+        {
+            explicitTypes.AddRange(ExtractTypes(attribute));
+        }
+
+        if (explicitTypes.Count == 0 && context.TargetSymbol is INamedTypeSymbol targetType)
+        {
+            // Applied to a class with no explicit types: generate accessors for that class and its graph.
+            explicitTypes.Add(targetType);
+        }
+
+        foreach (var type in explicitTypes)
+        {
+            foreach (var model in ConfigGraphWalker.WalkAccessors(type, compilation, token))
+            {
+                collected[model.FullyQualifiedName] = model;
+            }
+        }
+
+        return new EquatableArray<ConfigTypeModel>(collected.Values.ToImmutableArray());
+    }
+
+    private static IEnumerable<INamedTypeSymbol> ExtractTypes(AttributeData attribute)
+    {
+        foreach (var argument in attribute.ConstructorArguments)
+        {
+            if (argument.Kind == TypedConstantKind.Array)
+            {
+                foreach (var element in argument.Values)
+                {
+                    if (element.Value is INamedTypeSymbol named)
+                    {
+                        yield return named;
+                    }
+                }
+            }
+            else if (argument.Value is INamedTypeSymbol single)
+            {
+                yield return single;
+            }
+        }
     }
 }

@@ -150,4 +150,69 @@ namespace Sample
         GeneratedConfigRegistry.TryGetRegistrar(rootConfigType, out var registrar).Should().BeTrue();
         registrar.Should().NotBeNull();
     }
+
+    [Fact]
+    public void GeneratesAccessorsForAttributeMarkedTypeWithoutRegistrar()
+    {
+        const string source = @"
+namespace Sample
+{
+    using Neovolve.Configuration.DependencyInjection.Generated;
+
+    [GenerateConfigAccessors]
+    public sealed class StandaloneConfig
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var assembly = harness.EmitAndLoad();
+
+        var standaloneType = assembly.GetType("Sample.StandaloneConfig", true)!;
+
+        GeneratedConfigRegistry.TryGetProperties(standaloneType, out var accessors).Should().BeTrue();
+        accessors!.Single(accessor => accessor.Name == "Value").CanWrite.Should().BeTrue();
+
+        // A type that is only attribute-marked is not a ConfigureWith root, so no registrar is produced.
+        GeneratedConfigRegistry.TryGetRegistrar(standaloneType, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void GeneratesAccessorsForAssemblyLevelClosedGenericType()
+    {
+        const string source = @"
+using Neovolve.Configuration.DependencyInjection.Generated;
+
+[assembly: GenerateConfigAccessors(typeof(Sample.ReadOnlyHolder<string>))]
+
+namespace Sample
+{
+    public sealed class ReadOnlyHolder<T>
+    {
+        public ReadOnlyHolder(T value)
+        {
+            Value = value;
+        }
+
+        public T Value { get; }
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.CompilationErrors.Should().BeEmpty();
+
+        var assembly = harness.EmitAndLoad();
+
+        var closedType = assembly.GetType("Sample.ReadOnlyHolder`1", true)!.MakeGenericType(typeof(string));
+
+        GeneratedConfigRegistry.TryGetProperties(closedType, out var accessors).Should().BeTrue();
+
+        // The Value property is read only, so its accessor cannot be written.
+        accessors!.Single(accessor => accessor.Name == "Value").CanWrite.Should().BeFalse();
+    }
 }

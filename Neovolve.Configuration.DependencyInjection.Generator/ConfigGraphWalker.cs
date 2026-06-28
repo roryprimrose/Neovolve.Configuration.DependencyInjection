@@ -43,6 +43,16 @@ internal static class ConfigGraphWalker
             new EquatableArray<ChildRegistrationModel>(registrations.ToImmutable()));
     }
 
+    public static ImmutableArray<ConfigTypeModel> WalkAccessors(INamedTypeSymbol type, Compilation compilation,
+        CancellationToken cancellationToken)
+    {
+        // Reuse the root walk and keep only the accessor models; attribute-driven generation produces accessors
+        // for a type and its reachable graph but does not register a graph registrar.
+        var model = WalkRoot(type, compilation, cancellationToken);
+
+        return ImmutableArray.CreateRange(model.ConfigTypes);
+    }
+
     private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type)
     {
         var typeName = type.ToDisplayString(_fullyQualifiedFormat);
