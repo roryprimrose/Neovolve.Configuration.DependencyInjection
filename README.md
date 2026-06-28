@@ -166,6 +166,7 @@ The following are the default options that `ConfigureWith<T>` uses.
 | LogPropertyChangeLevel | `LogLevel` | `LogLevel.Information` | The log level to use when logging that a property on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyType | `LogReadOnlyPropertyType` | `LogReadOnlyPropertyType.ValueTypesOnly` | The types of read-only properties to log when they are updated. Supported values are `All`, `ValueTypesOnly` and `None.` |
+| NestedChangeLogging | `NestedChangeLogging` | `NestedChangeLogging.Summary` | How much detail is logged when a class property or a collection of classes changes. `Summary` logs class properties independently and collections of classes as an entry count only. `Deep` also walks class properties and the elements of collections of classes, logging individual nested changes with a full property path (for example `FilterRules[0].Port`). |
 | ReloadInjectedRawTypes | `bool` | `true` | Determines if raw types that are injected into the configuration system should be reloaded when the configuration changes |
 | SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that are skipped when walking the configuration graph. The configuration graph is resolved at compile time by the source generator using the default values of this option, so adding types to it at runtime does not change which configuration sections are registered. |
 
@@ -192,6 +193,8 @@ Because the generator knows each property's type at compile time, it also decide
 - Collections of scalar values are logged as an entry count change, or as the individual element values that changed.
 - Collections of complex types are logged only as an entry count change, because logging each element would just repeat the element type name.
 - Child configuration types are assigned but not logged at the parent, because each child type is registered and logs its own changes independently.
+
+Set the `NestedChangeLogging` option to `Deep` to also log the individual nested changes inside class properties and the elements of collections of classes, using a full property path such as `FilterRules[0].Port`. This costs more on deeper graphs and is off by default.
 
 If you need a value applier generated for a configuration type that is not reachable from a `ConfigureWith<T>` root (for example a type you update through `IConfigUpdater` directly), mark it with `[GenerateConfigAccessors]`. The attribute can be applied to a class, or at the assembly level with one or more types (including closed generic types):
 

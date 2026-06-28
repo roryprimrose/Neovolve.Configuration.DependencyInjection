@@ -229,5 +229,8 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
                 return _logger.IsEnabled(_options.LogPropertyChangeLevel);
             }
         }
+
+        /// <inheritdoc />
+        public bool LogNestedChanges => _options.NestedChangeLogging == NestedChangeLogging.Deep;
     }
 }

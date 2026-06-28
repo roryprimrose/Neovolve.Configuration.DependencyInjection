@@ -7,12 +7,13 @@ namespace Neovolve.Configuration.DependencyInjection.Generator;
 internal readonly struct ConfigTypeModel : IEquatable<ConfigTypeModel>
 {
     public ConfigTypeModel(string fullyQualifiedName, EquatableArray<ConfigPropertyModel> properties, bool isValueType,
-        LocationInfo? declarationLocation)
+        LocationInfo? declarationLocation, bool isReportOnly)
     {
         FullyQualifiedName = fullyQualifiedName;
         Properties = properties;
         IsValueType = isValueType;
         DeclarationLocation = declarationLocation;
+        IsReportOnly = isReportOnly;
     }
 
     public bool Equals(ConfigTypeModel other)
@@ -20,7 +21,8 @@ internal readonly struct ConfigTypeModel : IEquatable<ConfigTypeModel>
         return FullyQualifiedName == other.FullyQualifiedName
             && Properties.Equals(other.Properties)
             && IsValueType == other.IsValueType
-            && Nullable.Equals(DeclarationLocation, other.DeclarationLocation);
+            && Nullable.Equals(DeclarationLocation, other.DeclarationLocation)
+            && IsReportOnly == other.IsReportOnly;
     }
 
     public override bool Equals(object? obj)
@@ -36,6 +38,7 @@ internal readonly struct ConfigTypeModel : IEquatable<ConfigTypeModel>
         hash = (hash * 31) + Properties.GetHashCode();
         hash = (hash * 31) + IsValueType.GetHashCode();
         hash = (hash * 31) + (DeclarationLocation?.GetHashCode() ?? 0);
+        hash = (hash * 31) + IsReportOnly.GetHashCode();
 
         return hash;
     }
@@ -59,6 +62,8 @@ internal readonly struct ConfigTypeModel : IEquatable<ConfigTypeModel>
     public string FullyQualifiedName { get; }
 
     public bool IsValueType { get; }
+
+    public bool IsReportOnly { get; }
 
     public LocationInfo? DeclarationLocation { get; }
 

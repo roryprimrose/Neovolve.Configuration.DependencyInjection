@@ -33,6 +33,16 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         bool IsChangeLoggingEnabled { get; }
 
         /// <summary>
+        ///     Gets a value indicating whether nested property changes should be logged with a full property path.
+        /// </summary>
+        /// <returns><c>true</c> if nested changes should be logged; otherwise <c>false</c>.</returns>
+        /// <remarks>
+        ///     Generated code checks this before walking class properties and collections of classes, so the deeper change
+        ///     detection only runs when it is enabled.
+        /// </remarks>
+        bool LogNestedChanges { get; }
+
+        /// <summary>
         ///     Reports a scalar property whose value may have changed and logs the difference if it did.
         /// </summary>
         /// <typeparam name="TValue">The compile time type of the property value.</typeparam>

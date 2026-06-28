@@ -27,15 +27,20 @@ internal static class ConfigGraphWalker
         var rootName = root.ToDisplayString(_fullyQualifiedFormat);
         var configTypes = new Dictionary<string, ConfigTypeModel>(StringComparer.Ordinal);
         var registrations = ImmutableArray.CreateBuilder<ChildRegistrationModel>();
+        var deepTypes = new List<INamedTypeSymbol>();
 
-        configTypes[rootName] = BuildConfigType(root, compilation, skipTypes);
+        configTypes[rootName] = BuildConfigType(root, compilation, skipTypes, false, deepTypes);
 
         var rootInterfaces = GetAccessibleInterfaces(root, compilation);
 
         var ancestors = new HashSet<string>(StringComparer.Ordinal) { rootName };
 
-        WalkChildren(root, string.Empty, compilation, skipTypes, configTypes, registrations, ancestors,
+        WalkChildren(root, string.Empty, compilation, skipTypes, configTypes, registrations, ancestors, deepTypes,
             cancellationToken);
+
+        // Report-only types are the complex element types of indexable lists (and their reachable graph) that are not
+        // registered configuration types. They get a Report function for deep nested logging but no applier.
+        WalkReportOnlyTypes(compilation, skipTypes, configTypes, deepTypes, cancellationToken);
 
         return new RootModel(
             rootName,
@@ -56,7 +61,7 @@ internal static class ConfigGraphWalker
     }
 
     private static ConfigTypeModel BuildConfigType(INamedTypeSymbol type, Compilation compilation,
-        IReadOnlyCollection<INamedTypeSymbol?> skipTypes)
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, bool isReportOnly, List<INamedTypeSymbol> deepTypes)
     {
         var typeName = type.ToDisplayString(_fullyQualifiedFormat);
         var propertyModels = ImmutableArray.CreateBuilder<ConfigPropertyModel>();
@@ -68,38 +73,98 @@ internal static class ConfigGraphWalker
                 && property.SetMethod.DeclaredAccessibility == Accessibility.Public
                 && property.SetMethod.IsInitOnly == false;
             var isValueType = property.Type.IsValueType || property.Type.SpecialType == SpecialType.System_String;
-            var changeKind = ClassifyChange(property, type, compilation, skipTypes, out var elementTypeName);
+            var changeKind = ClassifyChange(property, type, compilation, skipTypes, out var elementTypeName,
+                out var deepType);
+
+            if (deepType != null)
+            {
+                deepTypes.Add(deepType);
+            }
 
             propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType,
                 changeKind, elementTypeName));
         }
 
         return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()),
-            type.IsValueType, LocationInfo.CreateFrom(type));
+            type.IsValueType, LocationInfo.CreateFrom(type), isReportOnly);
+    }
+
+    private static void WalkReportOnlyTypes(Compilation compilation,
+        IReadOnlyCollection<INamedTypeSymbol?> skipTypes, Dictionary<string, ConfigTypeModel> configTypes,
+        List<INamedTypeSymbol> seedTypes, CancellationToken cancellationToken)
+    {
+        var queue = new Queue<INamedTypeSymbol>(seedTypes);
+
+        while (queue.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var type = queue.Dequeue();
+            var name = type.ToDisplayString(_fullyQualifiedFormat);
+
+            if (configTypes.ContainsKey(name))
+            {
+                // The type is already a registered configuration type or has already been captured for reporting.
+                continue;
+            }
+
+            var discovered = new List<INamedTypeSymbol>();
+
+            configTypes[name] = BuildConfigType(type, compilation, skipTypes, true, discovered);
+
+            foreach (var child in discovered)
+            {
+                queue.Enqueue(child);
+            }
+        }
     }
 
     private static PropertyChangeKind ClassifyChange(IPropertySymbol property, INamedTypeSymbol owningType,
-        Compilation compilation, IReadOnlyCollection<INamedTypeSymbol?> skipTypes, out string? elementTypeName)
+        Compilation compilation, IReadOnlyCollection<INamedTypeSymbol?> skipTypes, out string? elementTypeName,
+        out INamedTypeSymbol? deepType)
     {
         elementTypeName = null;
+        deepType = null;
 
         var type = property.Type;
 
         if (ShouldRecurse(type, owningType, skipTypes))
         {
-            // The property is a child configuration type that is registered and logged independently, so the parent
-            // assigns it but does not log it.
+            if (type.IsValueType)
+            {
+                // A configuration struct is registered as a one-time snapshot and is compared by value at the parent,
+                // so it is treated as a scalar rather than walked for nested logging.
+                return PropertyChangeKind.Scalar;
+            }
+
+            // The property is a child configuration type. It is assigned but logged independently in summary mode, and
+            // walked for nested logging in deep mode.
+            deepType = (INamedTypeSymbol)type;
+
             return PropertyChangeKind.ChildConfig;
         }
 
-        var elementType = GetScalarListElementType(type, compilation);
+        var elementType = GetListElementType(type, compilation);
 
-        if (elementType != null
-            && IsScalar(elementType))
+        if (elementType != null)
         {
-            elementTypeName = elementType.ToDisplayString(_fullyQualifiedFormat);
+            if (IsScalar(elementType))
+            {
+                elementTypeName = elementType.ToDisplayString(_fullyQualifiedFormat);
 
-            return PropertyChangeKind.ScalarList;
+                return PropertyChangeKind.ScalarList;
+            }
+
+            if (elementType is INamedTypeSymbol namedElement
+                && namedElement.TypeKind == TypeKind.Class
+                && namedElement.SpecialType != SpecialType.System_String)
+            {
+                // An indexable list of complex elements can be walked per-element for nested logging in deep mode.
+                elementTypeName = elementType.ToDisplayString(_fullyQualifiedFormat);
+                deepType = namedElement;
+
+                return PropertyChangeKind.ComplexList;
+            }
         }
 
         if (ImplementsNonGenericICollection(type, compilation))
@@ -110,7 +175,7 @@ internal static class ConfigGraphWalker
         return PropertyChangeKind.Scalar;
     }
 
-    private static ITypeSymbol? GetScalarListElementType(ITypeSymbol type, Compilation compilation)
+    private static ITypeSymbol? GetListElementType(ITypeSymbol type, Compilation compilation)
     {
         if (type is IArrayTypeSymbol array)
         {
@@ -332,6 +397,7 @@ internal static class ConfigGraphWalker
         Dictionary<string, ConfigTypeModel> configTypes,
         ImmutableArray<ChildRegistrationModel>.Builder registrations,
         HashSet<string> ancestors,
+        List<INamedTypeSymbol> deepTypes,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -355,7 +421,7 @@ internal static class ConfigGraphWalker
 
             if (configTypes.ContainsKey(childName) == false)
             {
-                configTypes[childName] = BuildConfigType(childType, compilation, skipTypes);
+                configTypes[childName] = BuildConfigType(childType, compilation, skipTypes, false, deepTypes);
             }
 
             // Add the child to the current path to guard against cycles while still allowing the same type to
@@ -363,7 +429,7 @@ internal static class ConfigGraphWalker
             if (ancestors.Add(childName))
             {
                 WalkChildren(childType, sectionPath, compilation, skipTypes, configTypes, registrations, ancestors,
-                    cancellationToken);
+                    deepTypes, cancellationToken);
 
                 ancestors.Remove(childName);
             }

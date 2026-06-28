@@ -22,6 +22,11 @@ public interface IConfigureWithOptions
     LogCategoryType LogCategoryType { get; }
 
     /// <summary>
+    ///     Gets how much detail is logged when a class property or a collection of classes changes on reload.
+    /// </summary>
+    NestedChangeLogging NestedChangeLogging { get; }
+
+    /// <summary>
     ///     Gets the log level to use when logging property change notifications when <see cref="ReloadInjectedRawTypes" /> is
     ///     <c>true</c>.
     /// </summary>

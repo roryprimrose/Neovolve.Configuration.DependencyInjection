@@ -127,11 +127,18 @@ namespace Sample
         // Collection of complex elements -> ReportCount (count only, no per-element noise).
         generated.Should().Contain("context.ReportCount(\"Items\", previous, current)");
 
-        // Child configuration type -> assigned but not logged here (logged by its own applier).
-        generated.Should().Contain("injected.Child = updated.Child;");
+        // A report-only reporter is generated for the complex element type and used for per-element deep logging.
+        generated.Should().Contain("internal static class global__Sample_ChildItem_Reporter");
+        generated.Should().Contain("global__Sample_ChildItem_Reporter.Report(\"Items[\" + index + \"]\"");
+
+        // Child configuration type -> assigned but not logged here in summary (logged by its own applier).
+        generated.Should().Contain("injected.Child = current;");
         generated.Should().NotContain("context.ReportValue(\"Child\"");
         generated.Should().NotContain("context.ReportValues(\"Child\"");
         generated.Should().NotContain("context.ReportCount(\"Child\"");
+
+        // In deep mode the child is walked via its reporter.
+        generated.Should().Contain("global__Sample_ChildConfig_Reporter.Report(\"Child\"");
     }
 
     [Fact]
@@ -414,5 +421,7 @@ namespace Sample
         }
 
         public bool IsChangeLoggingEnabled => false;
+
+        public bool LogNestedChanges => false;
     }
 }

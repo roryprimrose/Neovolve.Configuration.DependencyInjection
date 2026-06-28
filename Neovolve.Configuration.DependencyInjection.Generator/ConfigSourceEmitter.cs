@@ -91,14 +91,26 @@ internal static class ConfigSourceEmitter
 
         if (orderedTypes.Length > 0)
         {
-            // The appliers copy strongly typed property values; nullability annotations on those properties are not
-            // relevant to the copy and would otherwise require per-property suppression, so the appliers are emitted
-            // with nullable analysis disabled.
+            // The appliers and reporters copy and compare strongly typed property values; nullability annotations on
+            // those properties are not relevant and would otherwise require per-property suppression, so they are
+            // emitted with nullable analysis disabled.
             builder.AppendLine("#nullable disable");
             builder.AppendLine();
 
             foreach (var type in orderedTypes)
             {
+                EmitReporterClass(builder, type);
+            }
+
+            foreach (var type in orderedTypes)
+            {
+                if (type.IsReportOnly)
+                {
+                    // Report-only types are complex collection elements used for nested logging only; they have a
+                    // reporter but no applier and are not registered.
+                    continue;
+                }
+
                 EmitApplierClass(builder, type);
             }
 
@@ -114,6 +126,11 @@ internal static class ConfigSourceEmitter
 
         foreach (var type in orderedTypes)
         {
+            if (type.IsReportOnly)
+            {
+                continue;
+            }
+
             EmitApplierRegistration(builder, type);
         }
 
@@ -169,28 +186,35 @@ internal static class ConfigSourceEmitter
 
         if (property.ChangeKind == PropertyChangeKind.ChildConfig)
         {
-            // A child configuration type is assigned but not logged here; it is registered and logged independently
-            // by its own applier.
-            builder.AppendLine("            try");
+            // A child configuration type is assigned and, in summary mode, logged independently by its own applier. In
+            // deep mode the parent walks it to log nested property changes.
+            var reporter = ReporterName(property.TypeFullyQualifiedName);
+
             builder.AppendLine("            {");
-            builder.Append("                injected.").Append(property.Name).Append(" = updated.")
-                .Append(property.Name).AppendLine(";");
-            builder.AppendLine("            }");
-            builder.AppendLine("            catch (global::System.Exception ex)");
-            builder.AppendLine("            {");
-            builder.Append("                context.ReportCopyFailure(\"").Append(property.Name)
+            builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" previous = default;");
+            builder.Append("                ").Append(property.TypeFullyQualifiedName).AppendLine(" current = default;");
+            builder.AppendLine("                var copied = false;");
+            builder.AppendLine("                try");
+            builder.AppendLine("                {");
+            builder.Append("                    previous = injected.").Append(property.Name).AppendLine(";");
+            builder.Append("                    current = updated.").Append(property.Name).AppendLine(";");
+            builder.Append("                    injected.").Append(property.Name).AppendLine(" = current;");
+            builder.AppendLine("                    copied = true;");
+            builder.AppendLine("                }");
+            builder.AppendLine("                catch (global::System.Exception ex)");
+            builder.AppendLine("                {");
+            builder.Append("                    context.ReportCopyFailure(\"").Append(property.Name)
                 .AppendLine("\", ex);");
+            builder.AppendLine("                }");
+            builder.AppendLine("                if (copied && context.LogNestedChanges && context.IsChangeLoggingEnabled)");
+            builder.AppendLine("                {");
+            builder.Append("                    changed |= ").Append(reporter).Append(".Report(\"")
+                .Append(property.Name).AppendLine("\", previous, current, context);");
+            builder.AppendLine("                }");
             builder.AppendLine("            }");
 
             return;
         }
-
-        var reportCall = property.ChangeKind switch
-        {
-            PropertyChangeKind.ScalarList => "ReportValues",
-            PropertyChangeKind.Countable => "ReportCount",
-            _ => "ReportValue"
-        };
 
         // A writable property is copied directly. The get, set and change report are wrapped per property so that a
         // single faulty member cannot stop the rest of the configuration from updating.
@@ -211,10 +235,141 @@ internal static class ConfigSourceEmitter
         builder.AppendLine("                }");
         builder.AppendLine("                if (copied && context.IsChangeLoggingEnabled)");
         builder.AppendLine("                {");
-        builder.Append("                    changed |= context.").Append(reportCall).Append("(\"")
-            .Append(property.Name).AppendLine("\", previous, current);");
+
+        if (property.ChangeKind == PropertyChangeKind.ScalarList)
+        {
+            builder.Append("                    changed |= context.ReportValues(\"").Append(property.Name)
+                .AppendLine("\", previous, current);");
+        }
+        else if (property.ChangeKind == PropertyChangeKind.ComplexList)
+        {
+            var reporter = ReporterName(property.ElementTypeFullyQualifiedName!);
+
+            builder.Append("                    changed |= context.ReportCount(\"").Append(property.Name)
+                .AppendLine("\", previous, current);");
+            builder.AppendLine(
+                "                    if (context.LogNestedChanges && previous != null && current != null && previous.Count == current.Count)");
+            builder.AppendLine("                    {");
+            builder.AppendLine("                        for (var index = 0; index < previous.Count; index++)");
+            builder.AppendLine("                        {");
+            builder.Append("                            changed |= ").Append(reporter).Append(".Report(\"")
+                .Append(property.Name).Append("[\" + index + \"]\", previous[index], current[index], context);")
+                .AppendLine();
+            builder.AppendLine("                        }");
+            builder.AppendLine("                    }");
+        }
+        else if (property.ChangeKind == PropertyChangeKind.Countable)
+        {
+            builder.Append("                    changed |= context.ReportCount(\"").Append(property.Name)
+                .AppendLine("\", previous, current);");
+        }
+        else
+        {
+            builder.Append("                    changed |= context.ReportValue(\"").Append(property.Name)
+                .AppendLine("\", previous, current);");
+        }
+
         builder.AppendLine("                }");
         builder.AppendLine("            }");
+    }
+
+    private static void EmitReporterClass(StringBuilder builder, ConfigTypeModel type)
+    {
+        var reporterName = ReporterName(type.FullyQualifiedName);
+
+        builder.Append("    internal static class ").Append(reporterName).AppendLine();
+        builder.AppendLine("    {");
+        builder.Append("        public static bool Report(string prefix, ").Append(type.FullyQualifiedName)
+            .Append(" previous, ").Append(type.FullyQualifiedName).Append(" updated, ").Append(UpdateContextType)
+            .AppendLine(" context)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            var changed = false;");
+        builder.AppendLine("            if (previous == null || updated == null)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return changed;");
+        builder.AppendLine("            }");
+        builder.AppendLine("            try");
+        builder.AppendLine("            {");
+
+        foreach (var property in type.Properties)
+        {
+            EmitReportProperty(builder, property);
+        }
+
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (global::System.Exception ex)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                context.ReportCopyFailure(prefix, ex);");
+        builder.AppendLine("            }");
+        builder.AppendLine("            return changed;");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine();
+    }
+
+    private static void EmitReportProperty(StringBuilder builder, ConfigPropertyModel property)
+    {
+        // Reporters only describe writable property changes; read only properties are reported by the owning type's
+        // own applier at the top level.
+        if (property.CanWrite == false)
+        {
+            return;
+        }
+
+        var path = "prefix + \"." + property.Name + "\"";
+
+        if (property.ChangeKind == PropertyChangeKind.ChildConfig)
+        {
+            var reporter = ReporterName(property.TypeFullyQualifiedName);
+
+            builder.Append("                changed |= ").Append(reporter).Append(".Report(").Append(path)
+                .Append(", previous.").Append(property.Name).Append(", updated.").Append(property.Name)
+                .AppendLine(", context);");
+
+            return;
+        }
+
+        if (property.ChangeKind == PropertyChangeKind.ScalarList)
+        {
+            builder.Append("                changed |= context.ReportValues(").Append(path).Append(", previous.")
+                .Append(property.Name).Append(", updated.").Append(property.Name).AppendLine(");");
+
+            return;
+        }
+
+        if (property.ChangeKind == PropertyChangeKind.ComplexList)
+        {
+            var reporter = ReporterName(property.ElementTypeFullyQualifiedName!);
+
+            builder.AppendLine("                {");
+            builder.Append("                    var nestedPrevious = previous.").Append(property.Name).AppendLine(";");
+            builder.Append("                    var nestedCurrent = updated.").Append(property.Name).AppendLine(";");
+            builder.Append("                    changed |= context.ReportCount(").Append(path)
+                .AppendLine(", nestedPrevious, nestedCurrent);");
+            builder.AppendLine(
+                "                    if (nestedPrevious != null && nestedCurrent != null && nestedPrevious.Count == nestedCurrent.Count)");
+            builder.AppendLine("                    {");
+            builder.AppendLine("                        for (var index = 0; index < nestedPrevious.Count; index++)");
+            builder.AppendLine("                        {");
+            builder.Append("                            changed |= ").Append(reporter).Append(".Report(").Append(path)
+                .AppendLine(" + \"[\" + index + \"]\", nestedPrevious[index], nestedCurrent[index], context);");
+            builder.AppendLine("                        }");
+            builder.AppendLine("                    }");
+            builder.AppendLine("                }");
+
+            return;
+        }
+
+        if (property.ChangeKind == PropertyChangeKind.Countable)
+        {
+            builder.Append("                changed |= context.ReportCount(").Append(path).Append(", previous.")
+                .Append(property.Name).Append(", updated.").Append(property.Name).AppendLine(");");
+
+            return;
+        }
+
+        builder.Append("                changed |= context.ReportValue(").Append(path).Append(", previous.")
+            .Append(property.Name).Append(", updated.").Append(property.Name).AppendLine(");");
     }
 
     private static void EmitApplierRegistration(StringBuilder builder, ConfigTypeModel type)
@@ -303,6 +458,11 @@ internal static class ConfigSourceEmitter
     private static string ApplierName(string typeFullyQualifiedName)
     {
         return SanitizeIdentifier(typeFullyQualifiedName, "_Applier");
+    }
+
+    private static string ReporterName(string typeFullyQualifiedName)
+    {
+        return SanitizeIdentifier(typeFullyQualifiedName, "_Reporter");
     }
 
     private static string RegistrarName(string rootTypeFullyQualifiedName)

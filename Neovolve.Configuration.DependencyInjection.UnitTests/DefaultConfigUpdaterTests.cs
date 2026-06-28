@@ -390,6 +390,52 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             logger.Entries.Should().Contain(x => x.EventId.Id == 5000);
         }
 
+        [Fact]
+        public void UpdateConfigLogsNestedCollectionElementChangesWhenDeep()
+        {
+            var injectedConfig = new DeepRoot();
+            injectedConfig.Items.Add(new DeepItem { Value = "a" });
+            var updatedConfig = new DeepRoot();
+            updatedConfig.Items.Add(new DeepItem { Value = "b" });
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information,
+                NestedChangeLogging = NestedChangeLogging.Deep
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // The element field change is logged with a nested property path.
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5000 && x.Message.Contains("Items[0].Value"));
+        }
+
+        [Fact]
+        public void UpdateConfigDoesNotLogNestedCollectionElementChangesWhenSummary()
+        {
+            var injectedConfig = new DeepRoot();
+            injectedConfig.Items.Add(new DeepItem { Value = "a" });
+            var updatedConfig = new DeepRoot();
+            updatedConfig.Items.Add(new DeepItem { Value = "b" });
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information,
+                NestedChangeLogging = NestedChangeLogging.Summary
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // In summary mode the unchanged entry count means nothing about the collection is logged.
+            logger.Entries.Should().NotContain(x => x.Message.Contains("Items"));
+        }
+
         private DefaultConfigUpdater SUT => GetSUT<DefaultConfigUpdater>();
     }
 }

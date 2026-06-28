@@ -29,6 +29,9 @@
             LogReadOnlyPropertyType.ValueTypesOnly;
 
         /// <inheritdoc />
+        public NestedChangeLogging NestedChangeLogging { get; set; } = NestedChangeLogging.Summary;
+
+        /// <inheritdoc />
         public bool ReloadInjectedRawTypes { get; set; } = true;
 
         /// <inheritdoc />

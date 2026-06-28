@@ -1,5 +1,6 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Models
 {
+    using System.Collections.ObjectModel;
     using System.Diagnostics.CodeAnalysis;
 
     internal class EmptyClass
@@ -88,6 +89,16 @@
     internal class ValueOnlyType
     {
         public int Number { get; set; }
+    }
+
+    internal class DeepItem
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    internal class DeepRoot
+    {
+        public Collection<DeepItem> Items { get; set; } = new();
     }
 
     internal record ChildRecord(string Name, int Start, bool End);

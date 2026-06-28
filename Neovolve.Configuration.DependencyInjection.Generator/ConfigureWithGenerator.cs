@@ -111,6 +111,13 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                if (configType.IsReportOnly)
+                {
+                    // Report-only types are complex collection elements used for nested logging, not hot reloaded
+                    // configuration types, so their mutability is irrelevant.
+                    continue;
+                }
+
                 string reason;
                 string fix;
 

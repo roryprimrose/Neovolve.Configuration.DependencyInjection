@@ -18,6 +18,12 @@ internal enum PropertyChangeKind
     ScalarList,
 
     /// <summary>
+    ///     An indexable list of complex elements logged as an entry count change, and in deep mode as per-element nested
+    ///     property changes.
+    /// </summary>
+    ComplexList,
+
+    /// <summary>
     ///     A collection whose elements are complex types, logged only as an entry count change.
     /// </summary>
     Countable,
