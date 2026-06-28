@@ -71,6 +71,10 @@
 	<ItemGroup>
 		<InternalsVisibleTo Include="Neovolve.Configuration.DependencyInjection.UnitTests" />
 
+		<!-- The generator unit tests compile inline source under this assembly name and apply the internal
+		     [GenerateConfigAccessors] test hook. -->
+		<InternalsVisibleTo Include="GeneratorTestAssembly" />
+
 		<!-- This is used to allow mocking libraries to access internal types -->
 		<InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
 	</ItemGroup>

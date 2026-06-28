@@ -6,12 +6,12 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
     ///     <c>ConfigureWith&lt;T&gt;</c> root.
     /// </summary>
     /// <remarks>
-    ///     Apply the attribute to a configuration class to generate accessors for that class and its reachable child types,
-    ///     or apply it at the assembly level passing one or more types (including closed generic types) to generate accessors
-    ///     for types declared elsewhere.
+    ///     This is an internal test hook used to exercise applier generation for types that are updated through
+    ///     <c>IConfigUpdater</c> directly rather than through <c>ConfigureWith&lt;T&gt;</c>. It is not part of the public
+    ///     API.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Assembly, AllowMultiple = true, Inherited = false)]
-    public sealed class GenerateConfigAccessorsAttribute : Attribute
+    internal sealed class GenerateConfigAccessorsAttribute : Attribute
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="GenerateConfigAccessorsAttribute" /> class for the type the

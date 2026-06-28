@@ -210,14 +210,6 @@ Configuration updated on property ServerConfig.Endpoints[0].Port from '80' to '4
 
 Deep logging costs more on deeper graphs and is off by default. It can also repeat a change that a registered child type already logs on its own, because both the parent (using a nested path) and the child type report it.
 
-If you need a value applier generated for a configuration type that is not reachable from a `ConfigureWith<T>` root (for example a type you update through `IConfigUpdater` directly), mark it with `[GenerateConfigAccessors]`. The attribute can be applied to a class, or at the assembly level with one or more types (including closed generic types):
-
-```csharp
-using Neovolve.Configuration.DependencyInjection.Generated;
-
-[assembly: GenerateConfigAccessors(typeof(StandaloneConfig), typeof(Holder<string>))]
-```
-
 ## Excluding properties and types
 The generator always treats `IEnumerable`, `Type`, `Assembly` and `Stream` as leaf values rather than nested configuration sections. To exclude additional properties or types from the configuration graph (so they are not registered, copied or logged on hot reload), use the exclusion attributes.
 
