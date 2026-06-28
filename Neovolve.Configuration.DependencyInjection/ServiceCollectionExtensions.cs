@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
-using Neovolve.Configuration.DependencyInjection.Comparison;
 using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
@@ -102,8 +101,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConfigureWithOptions>(provider =>
             provider.GetRequiredService<ConfigureWithOptions>());
 
-        services.AddChangeTracking();
-
         // Add the default configuration updater if one is not already registered
         services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
 
@@ -118,32 +115,6 @@ public static class ServiceCollectionExtensions
         // The source generator emits a strongly typed registrar for this root type, so the configuration graph
         // is registered without runtime reflection.
         registrar!.Register(services, configuration);
-
-        return services;
-    }
-
-    internal static IServiceCollection AddChangeTracking(this IServiceCollection services)
-    {
-        // Register the value evaluators
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(EquatableChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(ComparableChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator),
-            ServiceLifetime.Singleton));
-
-        // Register the evaluator processor that uses all the evaluators
-        services.AddSingleton<IValueProcessor, ValueProcessor>();
 
         return services;
     }

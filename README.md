@@ -1,6 +1,6 @@
 ﻿# Introduction
 
-The Neovolve.Configuration.DependencyInjection NuGet package provides `IHostBuilder` extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.
+The **Neovolve.Configuration.DependencyInjection** NuGet package provides `IHostBuilder` extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.
 
 [![GitHub license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection/blob/master/LICENSE)&nbsp;&nbsp;&nbsp;[![Nuget](https://img.shields.io/nuget/v/Neovolve.Configuration.DependencyInjection.svg)&nbsp;&nbsp;&nbsp;![Nuget](https://img.shields.io/nuget/dt/Neovolve.Configuration.DependencyInjection.svg)](https://www.nuget.org/packages/Neovolve.Configuration.DependencyInjection)
 
@@ -8,7 +8,11 @@ The Neovolve.Configuration.DependencyInjection NuGet package provides `IHostBuil
 
 # Installation
 
-The package can be installed from NuGet using ```Install-Package Neovolve.Configuration.DependencyInjection```.
+The package can be installed from NuGet using 
+
+```powershell
+Install-Package Neovolve.Configuration.DependencyInjection
+```
 
 # Usage
 This package requires that the application bootstrapping provide a root configuration class that matches the configuration structure that the application uses. 
