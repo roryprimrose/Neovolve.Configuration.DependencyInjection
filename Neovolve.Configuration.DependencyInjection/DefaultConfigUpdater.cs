@@ -176,9 +176,10 @@ public partial class DefaultConfigUpdater : IConfigUpdater
             return generated!;
         }
 
-        // Fallback used while the source generator is being rolled out for configuration types that have not
-        // been generated yet.
-        return ReflectionPropertyAccessorFactory.GetAccessors(targetType);
+        // The source generator emits accessors for every configuration type reachable from a ConfigureWith<T>
+        // root and for any type marked with [GenerateConfigAccessors]. A type without registered accessors has
+        // no bindable properties to copy.
+        return Array.Empty<ConfigPropertyAccessor>();
     }
 
     private void ReportReadOnlyProperty(Type targetType, ConfigPropertyAccessor property, ILogger? logger)

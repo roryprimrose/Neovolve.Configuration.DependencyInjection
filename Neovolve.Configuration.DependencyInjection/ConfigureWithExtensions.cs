@@ -81,13 +81,6 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        // Get the initial options which we need to do the recursion through configuration types
-        // NOTE: This configuration could be different to the singleton registered below which is used at the point of processing configuration updates
-        // The change in the singleton registration is with respect to LogReadOnlyPropertyLevel which is not used for the property recursion so this should be safe
-        var initialOptions = new ConfigureWithOptions();
-
-        configure(initialOptions);
-
         builder.ConfigureServices((_, services) =>
             {
                 // Add the options registration
@@ -122,17 +115,18 @@ public static class ConfigureWithExtensions
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
             });
 
-        if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar))
+        if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar) == false)
         {
-            // The source generator has emitted a strongly typed registrar for this root type, so the
-            // configuration graph is registered without runtime reflection.
-            return builder.ConfigureServices((context, services) =>
-                registrar!.Register(services, context.Configuration));
+            throw new InvalidOperationException(
+                $"No generated configuration registrar was found for '{typeof(T)}'. Ensure the "
+                + "Neovolve.Configuration.DependencyInjection source generator runs in the project that calls "
+                + "ConfigureWith.");
         }
 
-        // Fallback used while the source generator is being rolled out for root types that have not been
-        // generated yet.
-        return builder.RegisterConfigurationRoot<T>(initialOptions);
+        // The source generator emits a strongly typed registrar for this root type, so the configuration graph
+        // is registered without runtime reflection.
+        return builder.ConfigureServices((context, services) =>
+            registrar!.Register(services, context.Configuration));
     }
 
     internal static IServiceCollection AddChangeTracking(this IServiceCollection services)
