@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
 using NSubstitute;
 
-public class ConfigureWithExtensionsTests
+public class HostBuilderExtensionsTests
 {
     public static IEnumerable<object[]> ConfigTypesDataSet(bool configureReload)
     {
@@ -117,7 +117,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithOptionsThrowsExceptionWithNullBuilder()
     {
-        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, _ => { });
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!, _ => { });
 
         action.Should().Throw<ArgumentNullException>();
     }
@@ -279,7 +279,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithReloadThrowsExceptionWithNullBuilder()
     {
-        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!, false);
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!, false);
 
         action.Should().Throw<ArgumentNullException>();
     }
@@ -323,7 +323,7 @@ public class ConfigureWithExtensionsTests
     [Fact]
     public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
-        Action action = () => ConfigureWithExtensions.ConfigureWith<Config>(null!);
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!);
 
         action.Should().Throw<ArgumentNullException>();
     }

@@ -7,10 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Neovolve.Configuration.DependencyInjection;
 
 /// <summary>
-///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
+///     The <see cref="HostBuilderExtensions" /> class provides methods for configuring dependency injection of
 ///     strong typed configuration types with support for hot reloading configuration changes.
 /// </summary>
-public static class ConfigureWithExtensions
+public static class HostBuilderExtensions
 {
     /// <summary>
     ///     The <see cref="ConfigureWith{T}(IHostBuilder)" /> method is used to configure the host builder with
