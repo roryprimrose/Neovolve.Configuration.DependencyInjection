@@ -85,5 +85,10 @@
         public string? Third { get; set; }
     }
 
+    internal class ValueOnlyType
+    {
+        public int Number { get; set; }
+    }
+
     internal record ChildRecord(string Name, int Start, bool End);
 }

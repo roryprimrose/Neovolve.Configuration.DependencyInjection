@@ -18,4 +18,5 @@ using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     typeof(EmptyClass),
     typeof(ReadOnlyType<SimpleType>),
     typeof(ReadOnlyType<string>),
-    typeof(ReadOnlyType<int>))]
+    typeof(ReadOnlyType<int>),
+    typeof(ValueOnlyType))]

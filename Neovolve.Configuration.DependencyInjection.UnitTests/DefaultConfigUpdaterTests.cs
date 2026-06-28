@@ -407,6 +407,39 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             action.Should().NotThrow();
         }
 
+        [Fact]
+        public void UpdateConfigLogsValueTypeChangeWithoutUsingValueProcessor()
+        {
+            var injectedConfig = new ValueOnlyType
+            {
+                Number = 1
+            };
+            var updatedConfig = new ValueOnlyType
+            {
+                Number = 2
+            };
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // The value was copied and the change was logged.
+            injectedConfig.Number.Should().Be(2);
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5000);
+
+            // A value type is formatted and logged directly, so the object based value processor is never consulted
+            // and the value is never boxed into it.
+            Service<IValueProcessor>()
+                .DidNotReceive()
+                .FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>());
+        }
+
         private DefaultConfigUpdater SUT => GetSUT<DefaultConfigUpdater>();
     }
 }

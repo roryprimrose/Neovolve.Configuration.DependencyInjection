@@ -36,29 +36,49 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         }
 
         /// <inheritdoc />
-        public bool Report(string propertyPath, object? previousValue, object? updatedValue)
+        public bool Report<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
         {
             if (_logger == null)
             {
                 return false;
             }
 
+            if (typeof(TValue).IsValueType)
+            {
+                // Value types cannot be routed through the object based evaluator pipeline without boxing, and they are
+                // never collections, so the change is formatted and logged directly from the strongly typed values. The
+                // generated applier only calls this method once the values have already been found to differ.
+                try
+                {
+                    // Calling ToString directly (rather than via the null-conditional operator) keeps the call as a
+                    // constrained virtual call so the value type is not boxed.
+                    var valueChange = new IdentifiedChange(propertyPath, previousValue!.ToString() ?? string.Empty,
+                        updatedValue!.ToString() ?? string.Empty);
+
+                    LogChange(_logger, valueChange);
+                }
+                catch (Exception ex)
+                {
+                    // Record this failure with a reference to raising a GitHub issue.
+                    LogConfigChangeFailed(_logger, _targetType, propertyPath, ex);
+                }
+
+                return true;
+            }
+
             var changed = false;
 
             try
             {
-                // Identify all the changes in the property value and log them.
+                // A reference does not box when passed as object, so reference type values keep the full change
+                // evaluator pipeline (collection, dictionary and custom evaluators with nested property paths).
                 var changes = _valueProcessor.FindChanges(propertyPath, previousValue, updatedValue);
 
                 foreach (var change in changes)
                 {
                     changed = true;
 
-                    var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
-
-                    // A custom log format is required here, so the logging source generator is not used.
-                    _logger.Log(_options.LogPropertyChangeLevel, eventId, change.MessageFormat, _targetType,
-                        change.PropertyPath, change.FirstLogValue, change.SecondLogValue);
+                    LogChange(_logger, change);
                 }
             }
             catch (Exception ex)
@@ -68,6 +88,15 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
             }
 
             return changed;
+        }
+
+        private void LogChange(ILogger logger, IdentifiedChange change)
+        {
+            var eventId = new EventId(5000, CopyValuesEventName + ":PropertyUpdated");
+
+            // A custom log format is required here, so the logging source generator is not used.
+            logger.Log(_options.LogPropertyChangeLevel, eventId, change.MessageFormat, _targetType,
+                change.PropertyPath, change.FirstLogValue, change.SecondLogValue);
         }
 
         /// <inheritdoc />

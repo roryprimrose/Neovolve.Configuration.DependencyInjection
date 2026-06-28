@@ -24,19 +24,25 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         ///     <c>false</c>.
         /// </returns>
         /// <remarks>
-        ///     Generated code checks this before boxing values into a <see cref="Report" /> call so that the change detection
-        ///     path is skipped entirely when nothing will be logged.
+        ///     Generated code checks this before invoking <see cref="Report{TValue}" /> so that the change detection path
+        ///     is skipped entirely when nothing will be logged.
         /// </remarks>
         bool IsChangeLoggingEnabled { get; }
 
         /// <summary>
         ///     Reports that a writable property changed and logs the difference.
         /// </summary>
+        /// <typeparam name="TValue">The compile time type of the property value.</typeparam>
         /// <param name="propertyPath">The name of the property that changed.</param>
         /// <param name="previousValue">The value before the update.</param>
         /// <param name="updatedValue">The value after the update.</param>
         /// <returns><c>true</c> if a change was logged; otherwise <c>false</c>.</returns>
-        bool Report(string propertyPath, object? previousValue, object? updatedValue);
+        /// <remarks>
+        ///     The method is generic so that value type properties are never boxed: the generated applier already knows the
+        ///     property type at compile time, so value types are formatted and logged directly while reference types are
+        ///     routed through the change evaluator pipeline (where a reference does not box).
+        /// </remarks>
+        bool Report<TValue>(string propertyPath, TValue previousValue, TValue updatedValue);
 
         /// <summary>
         ///     Reports that a read only property cannot be updated, applying the configured read only logging policy.

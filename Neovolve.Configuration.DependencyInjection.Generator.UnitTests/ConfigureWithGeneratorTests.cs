@@ -330,7 +330,7 @@ namespace Sample
 
     private sealed class StubConfigUpdateContext : IConfigUpdateContext
     {
-        public bool Report(string propertyPath, object? previousValue, object? updatedValue)
+        public bool Report<TValue>(string propertyPath, TValue previousValue, TValue updatedValue)
         {
             return false;
         }
