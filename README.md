@@ -102,6 +102,12 @@ var builder = Host.CreateDefaultBuilder()
     .ConfigureWith<RootConfig>();
 ```
 
+Using `IHostBuilder` is the recommended way to use this library. For scenarios that work directly with an `IServiceCollection` and an `IConfiguration`, an equivalent overload is available. The `IHostBuilder` extension methods are thin wrappers over these.
+
+```csharp
+builder.Services.ConfigureWith<RootConfig>(builder.Configuration);
+```
+
 Given the above example, the following services would be registered with the host application:
 
 | Type | IOptions&lt;T&gt; | IOptionsSnapshot&lt;T&gt; | IOptionsMonitor&lt;T&gt; | Supports hot reload |

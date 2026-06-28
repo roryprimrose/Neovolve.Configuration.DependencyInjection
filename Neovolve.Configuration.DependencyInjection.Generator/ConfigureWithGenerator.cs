@@ -17,7 +17,7 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
 {
     private const string ConfigureWithMethodName = "ConfigureWith";
 
-    private const string ConfigureWithTypeName = "ConfigureWithExtensions";
+    private const string LibraryAssemblyName = "Neovolve.Configuration.DependencyInjection";
 
     private const string GenerateAccessorsAttributeName =
         "Neovolve.Configuration.DependencyInjection.Generated.GenerateConfigAccessorsAttribute";
@@ -183,7 +183,7 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
         }
 
         if (method.Name != ConfigureWithMethodName
-            || method.ContainingType?.Name != ConfigureWithTypeName
+            || method.ContainingAssembly?.Name != LibraryAssemblyName
             || method.TypeArguments.Length != 1)
         {
             return default;
