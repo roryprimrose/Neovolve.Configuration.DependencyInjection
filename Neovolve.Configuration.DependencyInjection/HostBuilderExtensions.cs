@@ -4,16 +4,13 @@
 namespace Microsoft.Extensions.Hosting;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
-using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
-///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
+///     The <see cref="HostBuilderExtensions" /> class provides methods for configuring dependency injection of
 ///     strong typed configuration types with support for hot reloading configuration changes.
 /// </summary>
-public static class ConfigureWithExtensions
+public static class HostBuilderExtensions
 {
     /// <summary>
     ///     The <see cref="ConfigureWith{T}(IHostBuilder)" /> method is used to configure the host builder with
@@ -80,49 +77,10 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        builder.ConfigureServices((_, services) =>
-            {
-                // Add the options registration
-                services.AddSingleton(c =>
-                {
-                    var config = new ConfigureWithOptions();
-
-                    var hostEnvironment = c.GetService<IHostEnvironment>();
-
-                    if (hostEnvironment != null
-                        && hostEnvironment.IsDevelopment())
-                    {
-                        config.LogReadOnlyPropertyLevel = LogLevel.Warning;
-                    }
-                    else
-                    {
-                        config.LogReadOnlyPropertyLevel = LogLevel.Debug;
-                    }
-
-                    configure(config);
-
-                    return config;
-                });
-
-                // Add a redirect from the options type to its interface
-                services.AddSingleton<IConfigureWithOptions>(provider =>
-                    provider.GetRequiredService<ConfigureWithOptions>());
-
-                // Add the default configuration updater if one is not already registered
-                services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
-            });
-
-        if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar) == false)
-        {
-            throw new InvalidOperationException(
-                $"No generated configuration registrar was found for '{typeof(T)}'. Ensure the "
-                + "Neovolve.Configuration.DependencyInjection source generator runs in the project that calls "
-                + "ConfigureWith.");
-        }
-
-        // The source generator emits a strongly typed registrar for this root type, so the configuration graph
-        // is registered without runtime reflection.
+        // The host builder is only needed to reach the service collection and the configuration built by the
+        // host. The registration is delegated to the IServiceCollection overload, which is the core of the
+        // library.
         return builder.ConfigureServices((context, services) =>
-            registrar!.Register(services, context.Configuration));
+            services.ConfigureWith<T>(context.Configuration, configure));
     }
 }

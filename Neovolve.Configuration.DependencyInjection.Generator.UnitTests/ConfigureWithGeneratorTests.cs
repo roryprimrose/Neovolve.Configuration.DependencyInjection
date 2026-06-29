@@ -211,6 +211,37 @@ namespace Sample
     }
 
     [Fact]
+    public void GeneratesForServiceCollectionCallSite()
+    {
+        const string source = @"
+namespace Sample
+{
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+
+    public sealed class RootConfig
+    {
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IServiceCollection services, IConfiguration configuration)
+        {
+            services.ConfigureWith<RootConfig>(configuration);
+        }
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should().BeEmpty();
+        harness.CompilationErrors.Should().BeEmpty();
+        harness.GeneratedSources.Should().ContainSingle();
+        harness.GeneratedSources[0].Should().Contain("RegisterGraph(typeof(global::Sample.RootConfig)");
+    }
+
+    [Fact]
     public void GeneratesRegistrarWithNestedSectionPaths()
     {
         var harness = GeneratorTestHarness.Run(NestedGraphSource);
