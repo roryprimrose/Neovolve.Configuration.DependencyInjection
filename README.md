@@ -123,7 +123,15 @@ var builder = Host.CreateDefaultBuilder()
     .ConfigureWith<RootConfig>();
 ```
 
-Using `IHostBuilder` is the recommended way to use this library. For scenarios that work directly with an `IServiceCollection` and an `IConfiguration`, an equivalent overload is available. The `IHostBuilder` extension methods are thin wrappers over these.
+When using the modern host application builder (for example `Host.CreateApplicationBuilder()` or `WebApplication.CreateBuilder()`), the same extension method is available directly on the `IHostApplicationBuilder`:
+
+```csharp
+var builder = Host.CreateApplicationBuilder();
+
+builder.ConfigureWith<RootConfig>();
+```
+
+Using `IHostBuilder` or `IHostApplicationBuilder` is the recommended way to use this library. For scenarios that work directly with an `IServiceCollection` and an `IConfiguration`, an equivalent overload is available. The host builder extension methods are thin wrappers over these.
 
 ```csharp
 builder.Services.ConfigureWith<RootConfig>(builder.Configuration);
