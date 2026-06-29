@@ -175,7 +175,8 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             Use(new ConfigureWithOptions
             {
-                LogReadOnlyPropertyType = option
+                LogReadOnlyPropertyType = option,
+                LogReadOnlyPropertyLevel = LogLevel.Warning
             });
 
             var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
@@ -204,7 +205,8 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             Use(new ConfigureWithOptions
             {
-                LogReadOnlyPropertyType = option
+                LogReadOnlyPropertyType = option,
+                LogReadOnlyPropertyLevel = LogLevel.Warning
             });
 
             var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
@@ -234,7 +236,8 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
 
             Use(new ConfigureWithOptions
             {
-                LogReadOnlyPropertyType = option
+                LogReadOnlyPropertyType = option,
+                LogReadOnlyPropertyLevel = LogLevel.Warning
             });
 
             var logger = Service<ICacheLogger<DefaultConfigUpdater>>();

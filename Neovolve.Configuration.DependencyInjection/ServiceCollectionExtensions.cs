@@ -6,8 +6,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
 using Neovolve.Configuration.DependencyInjection.Generated;
 
@@ -79,18 +77,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(c =>
         {
             var config = new ConfigureWithOptions();
-
-            var hostEnvironment = c.GetService<IHostEnvironment>();
-
-            if (hostEnvironment != null
-                && hostEnvironment.IsDevelopment())
-            {
-                config.LogReadOnlyPropertyLevel = LogLevel.Warning;
-            }
-            else
-            {
-                config.LogReadOnlyPropertyLevel = LogLevel.Debug;
-            }
 
             configure(config);
 
