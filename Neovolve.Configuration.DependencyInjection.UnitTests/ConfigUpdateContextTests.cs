@@ -56,20 +56,14 @@ public class ConfigUpdateContextTests
         sut.ReportCount("Items", previous, updated).Should().BeTrue();
     }
 
-    [Fact]
-    public void ReportValueReturnsFalseWhenUnchanged()
+    [Theory]
+    [InlineData(1, 1, false)]
+    [InlineData(1, 2, true)]
+    public void ReportValueReturnsWhetherValueChanged(int previous, int updated, bool expected)
     {
         var sut = new ConfigUpdateContext(typeof(string), Logger(), new ConfigureWithOptions());
 
-        sut.ReportValue("Name", 1, 1).Should().BeFalse();
-    }
-
-    [Fact]
-    public void ReportValueReturnsTrueWhenChanged()
-    {
-        var sut = new ConfigUpdateContext(typeof(string), Logger(), new ConfigureWithOptions());
-
-        sut.ReportValue("Name", 1, 2).Should().BeTrue();
+        sut.ReportValue("Name", previous, updated).Should().Be(expected);
     }
 
     [Fact]

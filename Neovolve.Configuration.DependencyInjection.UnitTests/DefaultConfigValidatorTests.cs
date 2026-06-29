@@ -59,12 +59,21 @@ public class DefaultConfigValidatorTests
         sut.IsValid(new Target(), null, null).Should().BeTrue();
     }
 
-    [Fact]
-    public void ThrowOnInvalidDataAnnotationsDoesNotThrowWhenValid()
+    [Theory]
+    [InlineData(10, false)]
+    [InlineData(600, true)]
+    public void ThrowOnInvalidDataAnnotationsThrowsOnlyWhenInvalid(int value, bool shouldThrow)
     {
-        var action = () => DefaultConfigValidator.ThrowOnInvalidDataAnnotations(new Target { Value = 10 });
+        var action = () => DefaultConfigValidator.ThrowOnInvalidDataAnnotations(new Target { Value = value });
 
-        action.Should().NotThrow();
+        if (shouldThrow)
+        {
+            action.Should().Throw<OptionsValidationException>();
+        }
+        else
+        {
+            action.Should().NotThrow();
+        }
     }
 
     [Fact]
@@ -73,14 +82,6 @@ public class DefaultConfigValidatorTests
         var action = () => DefaultConfigValidator.ThrowOnInvalidDataAnnotations<Target>(null!);
 
         action.Should().NotThrow();
-    }
-
-    [Fact]
-    public void ThrowOnInvalidDataAnnotationsThrowsWhenInvalid()
-    {
-        var action = () => DefaultConfigValidator.ThrowOnInvalidDataAnnotations(new Target { Value = 600 });
-
-        action.Should().Throw<OptionsValidationException>();
     }
 
     [Fact]
