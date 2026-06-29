@@ -408,6 +408,9 @@ public sealed class InjectionTests
     {
         var newConfig = Model.Create<RootConfig>();
 
+        // Keep TimeoutInSeconds within the [Range(10, 120)] on ThirdConfig so the reload passes validation.
+        newConfig.First.Second.Third.TimeoutInSeconds = 60;
+
         var data = JsonConvert.SerializeObject(newConfig);
 
         _output.WriteLine("Updated disk config: " + data);

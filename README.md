@@ -6,6 +6,23 @@ The **Neovolve.Configuration.DependencyInjection** NuGet package provides `IHost
 
 [![Actions Status](https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection/workflows/CI/badge.svg)](https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection/actions)
 
+# Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Hot reload support](#hot-reload-support)
+  - [Configuration types must be mutable classes to hot reload](#configuration-types-must-be-mutable-classes-to-hot-reload)
+- [Configuration validation](#configuration-validation)
+  - [Fail on start](#fail-on-start)
+  - [Validation on hot reload](#validation-on-hot-reload)
+- [Options](#options)
+- [Source generator](#source-generator)
+  - [Excluding properties and types](#excluding-properties-and-types)
+- [Recommendations](#recommendations)
+  - [Use read-only interface definitions for configuration types](#use-read-only-interface-definitions-for-configuration-types)
+  - [Properties for child configuration types should be classes](#properties-for-child-configuration-types-should-be-classes)
+  - [Avoid resolving the root config service](#avoid-resolving-the-root-config-service)
+
 # Installation
 
 The package can be installed from NuGet using 
@@ -165,6 +182,31 @@ public struct StartupOnlySettings
 ```
 
 The warning can also be disabled project-wide with `<NoWarn>$(NoWarn);NCDI001</NoWarn>`.
+
+# Configuration validation
+`ConfigureWith<T>` enforces validation on the configuration graph so invalid configuration is rejected rather than silently bound. Validation runs through the standard options validation pipeline, so every validation source that produces an `IValidateOptions<T>` participates:
+
+- **Data annotation attributes** (`[Range]`, `[Required]`, `[StringLength]`, and so on) on configuration properties are validated automatically. Each child configuration type is bound with `ValidateDataAnnotations()`, and the root type and any struct types are validated with their data annotation attributes as they are bound.
+- **Source generated validators** declared with `[OptionsValidator]` on a partial `IValidateOptions<T>` implementation. This keeps validation reflection free and AOT friendly. Register the validator as `IValidateOptions<T>` so the library picks it up.
+- **Custom validators** registered as `IValidateOptions<T>` for rules that cannot be expressed as attributes.
+
+```csharp
+public class ThirdConfig : IThirdConfig
+{
+    [Range(5, 120)]
+    public int TimeoutInSeconds { get; set; } = 30;
+
+    public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
+}
+```
+
+## Fail on start
+Invalid configuration fails fast at application startup. Child types are validated through `ValidateOnStart()`, while the root and struct configuration types are validated as they are bound. A failure throws an `OptionsValidationException` so the host does not start with invalid configuration.
+
+## Validation on hot reload
+When a configuration change is detected, the reloaded values are validated before being applied to the injected raw types. If validation fails, the change is rejected as a whole: the failure is logged and the previously valid configuration is retained, so a single invalid value never produces a fragmented update where some properties change and others do not. A reload that passes validation is applied as normal.
+
+To supply your own validation behaviour, register a custom `IConfigValidator` before calling `ConfigureWith<T>`; the default implementation runs the registered `IValidateOptions<T>` validators.
 
 # Options
 The following are the default options that `ConfigureWith<T>` uses.

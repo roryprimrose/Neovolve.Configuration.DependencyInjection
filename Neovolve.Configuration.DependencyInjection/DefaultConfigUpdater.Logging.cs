@@ -5,7 +5,7 @@ namespace Neovolve.Configuration.DependencyInjection;
 
 using Microsoft.Extensions.Logging;
 
-public partial class DefaultConfigUpdater
+internal partial class DefaultConfigUpdater
 {
     private const string CopyValuesEventName = "Neovolve.Configuration.DependencyInjection.IConfigUpdater.UpdateConfig";
 

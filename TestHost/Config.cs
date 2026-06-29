@@ -1,6 +1,7 @@
 ﻿namespace TestHost;
 
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 
 public interface IConfig
 {
@@ -11,6 +12,7 @@ public class Config : IConfig
 {
     public FirstConfig First { get; } = new();
 
+    [Required]
     public string RootValue { get; set; } = string.Empty;
 }
 
@@ -54,5 +56,7 @@ public class ThirdConfig : IThirdConfig
     public string ThirdValue { get; set; } = string.Empty;
 
     public TimeSpan Timeout => TimeSpan.FromSeconds(TimeoutInSeconds);
+
+    [Range(10, 120)]
     public int TimeoutInSeconds { get; set; } = 123;
 }
