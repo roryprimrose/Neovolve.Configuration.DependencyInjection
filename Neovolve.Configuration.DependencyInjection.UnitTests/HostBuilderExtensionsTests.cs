@@ -109,7 +109,7 @@ public class HostBuilderExtensionsTests
     [Fact]
     public void ConfigureWithOptionsThrowsExceptionWithNullBuilder()
     {
-        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!, _ => { });
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostBuilder)null!, _ => { });
 
         action.Should().Throw<ArgumentNullException>();
     }
@@ -270,7 +270,7 @@ public class HostBuilderExtensionsTests
     [Fact]
     public void ConfigureWithReloadThrowsExceptionWithNullBuilder()
     {
-        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!, false);
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostBuilder)null!, false);
 
         action.Should().Throw<ArgumentNullException>();
     }
@@ -314,8 +314,97 @@ public class HostBuilderExtensionsTests
     [Fact]
     public void ConfigureWithThrowsExceptionWithNullBuilder()
     {
-        Action action = () => HostBuilderExtensions.ConfigureWith<Config>(null!);
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostBuilder)null!);
 
         action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ConfigureWithApplicationBuilderRegistersRootConfig()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.Configuration.AddInMemoryCollection(BuildConfigData());
+
+        builder.ConfigureWith<Config>();
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<Config>();
+
+        actual.RootValue.Should().Be("This is the root value");
+        actual.First.FirstValue.Should().Be("This is the first value");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ConfigureWithApplicationBuilderRegistersReloadOptions(bool reloadInjectedRawTypes)
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.Configuration.AddInMemoryCollection(BuildConfigData());
+
+        builder.ConfigureWith<Config>(reloadInjectedRawTypes);
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<IConfigureWithOptions>();
+
+        actual.ReloadInjectedRawTypes.Should().Be(reloadInjectedRawTypes);
+    }
+
+    [Fact]
+    public void ConfigureWithApplicationBuilderRegistersProvidedOptions()
+    {
+        var builder = Host.CreateApplicationBuilder();
+
+        builder.Configuration.AddInMemoryCollection(BuildConfigData());
+
+        builder.ConfigureWith<Config>(x => { x.CustomLogCategory = "MyCategory"; });
+
+        using var host = builder.Build();
+
+        var actual = host.Services.GetRequiredService<IConfigureWithOptions>();
+
+        actual.CustomLogCategory.Should().Be("MyCategory");
+    }
+
+    [Fact]
+    public void ConfigureWithApplicationBuilderThrowsExceptionWithNullBuilder()
+    {
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostApplicationBuilder)null!);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ConfigureWithApplicationBuilderReloadThrowsExceptionWithNullBuilder()
+    {
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostApplicationBuilder)null!, false);
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void ConfigureWithApplicationBuilderOptionsThrowsExceptionWithNullBuilder()
+    {
+        Action action = () => HostBuilderExtensions.ConfigureWith<Config>((IHostApplicationBuilder)null!, _ => { });
+
+        action.Should().Throw<ArgumentNullException>();
+    }
+
+    private static Dictionary<string, string?> BuildConfigData()
+    {
+        return new Dictionary<string, string?>
+        {
+            ["RootValue"] = "This is the root value",
+            ["First:FirstValue"] = "This is the first value",
+            ["First:Second:SecondValue"] = "This is the second value",
+            ["First:Second:MoreValues:First"] = "First",
+            ["First:Second:MoreValues:Second"] = "Second",
+            ["First:Second:MoreValues:Third"] = "Third",
+            ["First:Second:Third:ThirdValue"] = "This is the third value"
+        };
     }
 }

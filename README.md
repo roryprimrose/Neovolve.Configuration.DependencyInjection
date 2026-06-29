@@ -1,6 +1,6 @@
 ﻿# Introduction
 
-The **Neovolve.Configuration.DependencyInjection** NuGet package provides `IHostBuilder` and `IServiceCollection` extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.
+The **Neovolve.Configuration.DependencyInjection** NuGet package provides `IHostApplicationBuilder`, `IHostBuilder` and `IServiceCollection` extension methods for registering strong typed configuration bindings as services. It supports registration of nested configuration types and hot reload support.
 
 [![GitHub license](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/roryprimrose/Neovolve.Configuration.DependencyInjection/blob/master/LICENSE)&nbsp;&nbsp;&nbsp;[![Nuget](https://img.shields.io/nuget/v/Neovolve.Configuration.DependencyInjection.svg)&nbsp;&nbsp;&nbsp;![Nuget](https://img.shields.io/nuget/dt/Neovolve.Configuration.DependencyInjection.svg)](https://www.nuget.org/packages/Neovolve.Configuration.DependencyInjection)
 
@@ -113,17 +113,25 @@ For an ASP.Net system, this would be registered like the following:
 var builder = WebApplication.CreateBuilder(args);
 
 // Register all configuration types
-builder.Host.ConfigureWith<RootConfig>();
+builder.ConfigureWith<RootConfig>();
 ```
 
-For other platforms, such as console applications, this would be registered like the following:
+For other platforms, such as console applications, the host application builder is registered like the following:
+
+```csharp
+var builder = Host.CreateApplicationBuilder();
+
+builder.ConfigureWith<RootConfig>();
+```
+
+Using `IHostApplicationBuilder` (returned by `WebApplication.CreateBuilder()` and `Host.CreateApplicationBuilder()`) is the recommended way to use this library. The classic `IHostBuilder` is also supported for applications still using `Host.CreateDefaultBuilder()`:
 
 ```csharp
 var builder = Host.CreateDefaultBuilder()
     .ConfigureWith<RootConfig>();
 ```
 
-Using `IHostBuilder` is the recommended way to use this library. For scenarios that work directly with an `IServiceCollection` and an `IConfiguration`, an equivalent overload is available. The `IHostBuilder` extension methods are thin wrappers over these.
+For scenarios that work directly with an `IServiceCollection` and an `IConfiguration`, an equivalent overload is available. The host builder extension methods are thin wrappers over these.
 
 ```csharp
 builder.Services.ConfigureWith<RootConfig>(builder.Configuration);
