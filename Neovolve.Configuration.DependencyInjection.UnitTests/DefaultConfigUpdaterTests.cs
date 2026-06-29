@@ -5,11 +5,9 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
     using ModelBuilder;
-    using Neovolve.Configuration.DependencyInjection.Comparison;
     using Neovolve.Configuration.DependencyInjection.UnitTests.Models;
     using Neovolve.Logging.Xunit;
     using NSubstitute;
-    using NSubstitute.ExceptionExtensions;
 
     public sealed class DefaultConfigUpdaterTests : TestsInternal
     {
@@ -21,19 +19,7 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         [Fact]
         public void ThrowsExceptionWithNullOptions()
         {
-            var valueProcessor = Substitute.For<IValueProcessor>();
-
-            var action = () => new DefaultConfigUpdater(valueProcessor, null!);
-
-            action.Should().Throw<ArgumentNullException>();
-        }
-
-        [Fact]
-        public void ThrowsExceptionWithNullValueProcessor()
-        {
-            var options = new ConfigureWithOptions();
-
-            var action = () => new DefaultConfigUpdater(null!, options);
+            var action = () => new DefaultConfigUpdater(null!);
 
             action.Should().Throw<ArgumentNullException>();
         }
@@ -137,13 +123,11 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             var injectedConfig = Model.Create<SimpleType>();
             var updatedConfig = Model.Create<SimpleType>();
             var name = Guid.NewGuid().ToString();
-            var changes = new IdentifiedChange[]{ Model.Create<IdentifiedChange>()};
 
             Use(new ConfigureWithOptions
             {
                 LogPropertyChangeLevel = logLevel
             });
-            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>()).Returns(changes);
 
             var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
 
@@ -268,34 +252,6 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
         }
 
         [Theory]
-        [InlineData(LogLevel.Critical)]
-        [InlineData(LogLevel.Debug)]
-        [InlineData(LogLevel.Error)]
-        [InlineData(LogLevel.Information)]
-        [InlineData(LogLevel.Trace)]
-        [InlineData(LogLevel.Warning)]
-        public void UpdateConfigLogsFailureToLogPropertyChangesWhenEnabled(LogLevel logLevel)
-        {
-            var injectedConfig = Model.Create<SimpleType>();
-            var updatedConfig = Model.Create<SimpleType>();
-            var name = Guid.NewGuid().ToString();
-
-            Use(new ConfigureWithOptions
-            {
-                LogPropertyChangeLevel = logLevel
-            });
-
-            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
-
-            Service<IValueProcessor>().FindChanges(Arg.Any<string>(), Arg.Any<object?>(), Arg.Any<object?>())
-                .Throws(new TimeoutException());
-
-            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
-
-            logger.Entries.Should().Contain(x => x.EventId.Id == 5004 && x.LogLevel == LogLevel.Warning);
-        }
-
-        [Theory]
         [InlineData(null)]
         [InlineData("injected value")]
         public void UpdateConfigRetainsPropertyValueWhenBothValuesAreSame(string? value)
@@ -405,6 +361,101 @@ namespace Neovolve.Configuration.DependencyInjection.UnitTests
             var action = () => SUT.UpdateConfig(injectedConfig, updatedConfig, name, Service<ILogger>());
 
             action.Should().NotThrow();
+        }
+
+        [Fact]
+        public void UpdateConfigLogsValueTypeChange()
+        {
+            var injectedConfig = new ValueOnlyType
+            {
+                Number = 1
+            };
+            var updatedConfig = new ValueOnlyType
+            {
+                Number = 2
+            };
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // The value was copied and the change was logged.
+            injectedConfig.Number.Should().Be(2);
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5000);
+        }
+
+        [Fact]
+        public void UpdateConfigLogsNestedCollectionElementChangesWhenDeep()
+        {
+            var injectedConfig = new DeepRoot();
+            injectedConfig.Items.Add(new DeepItem { Value = "a" });
+            var updatedConfig = new DeepRoot();
+            updatedConfig.Items.Add(new DeepItem { Value = "b" });
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information,
+                NestedChangeLogging = NestedChangeLogging.Deep
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // The element field change is logged with a nested property path.
+            logger.Entries.Should().Contain(x => x.EventId.Id == 5000 && x.Message.Contains("Items[0].Value"));
+        }
+
+        [Fact]
+        public void UpdateConfigDoesNotLogNestedCollectionElementChangesWhenSummary()
+        {
+            var injectedConfig = new DeepRoot();
+            injectedConfig.Items.Add(new DeepItem { Value = "a" });
+            var updatedConfig = new DeepRoot();
+            updatedConfig.Items.Add(new DeepItem { Value = "b" });
+            var name = Guid.NewGuid().ToString();
+
+            Use(new ConfigureWithOptions
+            {
+                LogPropertyChangeLevel = LogLevel.Information,
+                NestedChangeLogging = NestedChangeLogging.Summary
+            });
+
+            var logger = Service<ICacheLogger<DefaultConfigUpdater>>();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, logger);
+
+            // In summary mode the unchanged entry count means nothing about the collection is logged.
+            logger.Entries.Should().NotContain(x => x.Message.Contains("Items"));
+        }
+
+        [Fact]
+        public void UpdateConfigDoesNotCopySkippedProperty()
+        {
+            var injectedConfig = new SkipPropertyType
+            {
+                Kept = "kept-old",
+                Ignored = "ignored-old"
+            };
+            var updatedConfig = new SkipPropertyType
+            {
+                Kept = "kept-new",
+                Ignored = "ignored-new"
+            };
+            var name = Guid.NewGuid().ToString();
+
+            SUT.UpdateConfig(injectedConfig, updatedConfig, name, Service<ILogger>());
+
+            // The kept property is copied; the [SkipConfigProperty] property is left unchanged.
+            injectedConfig.Kept.Should().Be("kept-new");
+            injectedConfig.Ignored.Should().Be("ignored-old");
         }
 
         private DefaultConfigUpdater SUT => GetSUT<DefaultConfigUpdater>();

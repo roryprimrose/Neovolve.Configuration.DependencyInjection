@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+
+    <!-- xUnit v3 runs on the Microsoft Testing Platform, which requires an executable test host. -->
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference the library (for the public ConfigureWith API and config types in test sources). -->
+    <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection\Neovolve.Configuration.DependencyInjection.csproj" />
+    <!-- Reference the generator as a normal assembly so the tests can host it in a CSharpGeneratorDriver. -->
+    <ProjectReference Include="..\Neovolve.Configuration.DependencyInjection.Generator\Neovolve.Configuration.DependencyInjection.Generator.csproj" />
+  </ItemGroup>
+
+</Project>

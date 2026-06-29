@@ -1,6 +1,5 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection;
 
-using System.Collections.ObjectModel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +19,11 @@ public interface IConfigureWithOptions
     ///     Gets the log category to use when logging messages for configuration binding.
     /// </summary>
     LogCategoryType LogCategoryType { get; }
+
+    /// <summary>
+    ///     Gets how much detail is logged when a class property or a collection of classes changes on reload.
+    /// </summary>
+    NestedChangeLogging NestedChangeLogging { get; }
 
     /// <summary>
     ///     Gets the log level to use when logging property change notifications when <see cref="ReloadInjectedRawTypes" /> is
@@ -48,9 +52,4 @@ public interface IConfigureWithOptions
     ///     configuration properties updated as underlying configuration data sources change.
     /// </remarks>
     bool ReloadInjectedRawTypes { get; }
-
-    /// <summary>
-    ///     Gets the collection of types that should be skipped when attempting register types for configuration sections.
-    /// </summary>
-    Collection<Type> SkipPropertyTypes { get; }
 }

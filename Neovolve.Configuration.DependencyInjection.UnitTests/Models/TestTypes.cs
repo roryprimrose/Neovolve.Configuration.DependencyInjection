@@ -1,6 +1,8 @@
 ﻿namespace Neovolve.Configuration.DependencyInjection.UnitTests.Models
 {
+    using System.Collections.ObjectModel;
     using System.Diagnostics.CodeAnalysis;
+    using Neovolve.Configuration.DependencyInjection.Generated;
 
     internal class EmptyClass
     {
@@ -83,6 +85,29 @@
         public string? First { get; set; }
         public string? Second { get; set; }
         public string? Third { get; set; }
+    }
+
+    internal class ValueOnlyType
+    {
+        public int Number { get; set; }
+    }
+
+    internal class DeepItem
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    internal class DeepRoot
+    {
+        public Collection<DeepItem> Items { get; set; } = new();
+    }
+
+    internal class SkipPropertyType
+    {
+        public string Kept { get; set; } = string.Empty;
+
+        [SkipConfigProperty]
+        public string Ignored { get; set; } = string.Empty;
     }
 
     internal record ChildRecord(string Name, int Start, bool End);

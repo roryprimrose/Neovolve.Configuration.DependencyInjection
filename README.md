@@ -105,7 +105,7 @@ var builder = Host.CreateDefaultBuilder()
 Given the above example, the following services would be registered with the host application:
 
 | Type | IOptions&lt;T&gt; | IOptionsSnapshot&lt;T&gt; | IOptionsMonitor&lt;T&gt; | Supports hot reload |
-|-|-|-|-|
+|-|-|-|-|-|
 | RootConfig | No | No | No | No |
 | IRootConfig | No | No | No | No |
 | FirstConfig | Yes | Yes | Yes | Yes, except for IOptions&lt;FirstConfig&gt; |
@@ -120,7 +120,7 @@ See [Options pattern in .NET -> Options interfaces](https://learn.microsoft.com/
 # Hot reload support
 The options binding system in .NET Core supports hot reload of configuration data which is implemented by some configuration providers like the providers for json and ini files. This is typically done by watching the configuration source for changes and then reloading the configuration data. This is useful for scenarios where configuration data is stored in a file and the application needs to react to changes in the file without needing to restart the application. This support is provided by the `IOptionsSnapshot<>` and `IOptionsMonitor<>` services.
 
-One of the benefits of this package is that it supports hot reloading of injected raw configuration services by default. A raw type is a configuration class and its defined interfaces that are found under the root configuration type. In this definition, a raw type is anything other than `IOption<>`, `IOptionsSnapshot<>` or `IOptionsMonitor<>`. 
+One of the benefits of this package is that it supports hot reloading of injected raw configuration services by default. A raw type is a configuration class and its defined interfaces that are found under the root configuration type. In this definition, a raw type is anything other than `IOptions<>`, `IOptionsSnapshot<>` or `IOptionsMonitor<>`. 
 
 In the above configuration example, the raw types that support hot reloading are:
 - IFirstConfig
@@ -136,18 +136,38 @@ The reason to use `IOptionsMonitor<>` instead of the raw type is when the applic
 
 The hot reload support for raw configuration types can be disabled by setting the `ReloadInjectedRawTypes` option to `false` in the `ConfigureWith<T>` overload.
 
+## Configuration types must be mutable classes to hot reload
+Hot reload works by updating the existing singleton instance of a configuration type in place when the configuration changes. That requires the type to be a reference type with writable properties. Two kinds of configuration type cannot be hot reloaded:
+
+- **Value types** (`struct` and `record struct`). A struct is copied when it is injected, so updating the registered instance would not reach the copies already handed to application classes. Struct configuration types are bound and registered once as a snapshot of the configuration at startup, and they do not receive later updates.
+- **Reference types with no writable properties** (for example a positional `record` whose properties are all `init`-only). There is nowhere to write the updated values, so the injected instance keeps its startup values.
+
+The source generator reports these cases at compile time as warning **NCDI001** so the limitation is visible where the type is declared rather than failing silently at runtime. The accompanying code fix converts a `struct` (or `record struct`) configuration type into a class so it can hot reload. For a record with no writable properties, add settable properties or convert it to a mutable class.
+
+If a one-time snapshot is the intended behaviour for a given type, suppress the warning for that type:
+
+```csharp
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Neovolve.Configuration", "NCDI001", Justification = "Snapshot binding is intended for this type.")]
+public struct StartupOnlySettings
+{
+    public string Name { get; set; }
+}
+```
+
+The warning can also be disabled project-wide with `<NoWarn>$(NoWarn);NCDI001</NoWarn>`.
+
 # Options
 The following are the default options that `ConfigureWith<T>` uses.
 
 | Option | Type | Default | Description |
 |-|-|-|-|
-| CustomLogCategory | `string` | `string.Empty` | The custom log category used when `LogCategoryType` is `LogCategoryType.Custom` |
+| CustomLogCategory | `string` | `Neovolve.Configuration.DependencyInjection.ConfigureWith` | The custom log category used when `LogCategoryType` is `LogCategoryType.Custom` |
 | LogCategoryType | `LogCategoryType` | `LogCategoryType.TargetType` | The log category to use when logging messages for configuration updates on raw types. Supported values are `TargetType` or `Custom`. |
 | LogPropertyChangeLevel | `LogLevel` | `LogLevel.Information` | The log level to use when logging that a property on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyLevel | `LogLevel` | `LogLevel.Warning` in Development; otherwise `Debug` | The log level to use when logging that updates are detected for read-only properties on an injected raw type has been updated when `ReloadInjectedRawTypes` is `true`. |
 | LogReadOnlyPropertyType | `LogReadOnlyPropertyType` | `LogReadOnlyPropertyType.ValueTypesOnly` | The types of read-only properties to log when they are updated. Supported values are `All`, `ValueTypesOnly` and `None.` |
+| NestedChangeLogging | `NestedChangeLogging` | `NestedChangeLogging.Summary` | How much detail is logged when a class property or a collection of classes changes. `Summary` logs class properties independently and collections of classes as an entry count only. `Deep` also walks class properties and the elements of collections of classes, logging individual nested changes with a full property path (for example `FilterRules[0].Port`). |
 | ReloadInjectedRawTypes | `bool` | `true` | Determines if raw types that are injected into the configuration system should be reloaded when the configuration changes |
-| SkipPropertyTypes | `Collection<Type>` | `[typeof(IEnumerable), typeof(Type), typeof(Assembly), typeof(Stream)]` | A collection of property types that should be skipped when registering configuration sections. |
 
 These options can be set in the `ConfigureWith<T>` overload.
 
@@ -158,10 +178,71 @@ var builder = Host.CreateDefaultBuilder()
         x.LogCategoryType = LogCategoryType.Custom;
         x.LogReadOnlyPropertyLevel = LogLevel.Information;
         x.LogReadOnlyPropertyType = LogReadOnlyPropertyType.All;
+        x.NestedChangeLogging = NestedChangeLogging.Deep;
         x.ReloadInjectedRawTypes = false;
-        x.SkipPropertyTypes.Add(typeof(ComplexTypeNotToBeRegistered));
     });
 ```
+
+To exclude a property or type from the configuration graph, see [Excluding properties and types](#excluding-properties-and-types).
+
+# Source generator
+This package includes a Roslyn source generator that runs in the project that calls `ConfigureWith<T>`. At compile time it walks the configuration type graph from each `ConfigureWith<T>` root and emits the registration code plus a strongly typed value applier for each configuration type. Each applier assigns the updated property values directly onto the injected instance, so the library binds and hot reloads configuration without runtime reflection and without boxing value type properties on the update path. The generator ships with the package and requires no configuration.
+
+Because the generator knows each property's type at compile time, it also decides how a property change is logged (when change logging is enabled), without any runtime type inspection:
+
+- Scalar values (numbers, strings, enums, and so on) are logged as `from 'old' to 'new'`.
+- Collections of scalar values are logged as an entry count change, or as the individual element values that changed.
+- Collections of complex types are logged only as an entry count change, because logging each element would just repeat the element type name.
+- Child configuration types are assigned but not logged at the parent, because each child type is registered and logs its own changes independently.
+
+For example, given a `ServerConfig` with a `Name` string, a `Tags` collection of strings and an `Endpoints` collection of `Endpoint` objects, a reload that renames the server and adds a tag logs the following in the default `Summary` mode:
+
+```text
+Configuration updated on property ServerConfig.Name from 'web-01' to 'web-02'
+Configuration updated on property ServerConfig.Tags from 2 entries to 3 entries
+```
+
+A change to an endpoint's port is not logged in `Summary` mode when the endpoint count is unchanged, because the elements are complex types. Setting the `NestedChangeLogging` option to `Deep` also logs the individual nested changes inside class properties and the elements of collections of classes, using a full property path:
+
+```text
+Configuration updated on property ServerConfig.Endpoints[0].Port from '80' to '443'
+```
+
+Deep logging costs more on deeper graphs and is off by default. It can also repeat a change that a registered child type already logs on its own, because both the parent (using a nested path) and the child type report it.
+
+## Excluding properties and types
+The generator always treats `IEnumerable`, `Type`, `Assembly` and `Stream` as leaf values rather than nested configuration sections. To exclude additional properties or types from the configuration graph (so they are not registered, copied or logged on hot reload), use the exclusion attributes.
+
+Mark an individual property with `[SkipConfigProperty]`:
+
+```csharp
+using Neovolve.Configuration.DependencyInjection.Generated;
+
+public class ServerConfig
+{
+    public string Name { get; set; } = string.Empty;
+
+    [SkipConfigProperty]
+    public string ComputedToken { get; set; } = string.Empty;
+}
+```
+
+Mark a type with `[SkipConfigType]` to exclude it wherever it appears as a property, or list types at the assembly level:
+
+```csharp
+using Neovolve.Configuration.DependencyInjection.Generated;
+
+[SkipConfigType]
+public class DiagnosticState
+{
+    public string Value { get; set; } = string.Empty;
+}
+
+// or, for types declared elsewhere:
+[assembly: SkipConfigType(typeof(SomeThirdPartyType))]
+```
+
+The generator also reports diagnostic **NCDI001** when a configuration type in the graph cannot be hot reloaded (see [Configuration types must be mutable classes to hot reload](#configuration-types-must-be-mutable-classes-to-hot-reload)). A code fix is included to convert a `struct` configuration type into a class.
 
 # Recommendations
 
@@ -171,7 +252,7 @@ Configuration class definitions require that properties are mutable to allow the
 The `ConfigureWith<T>` extension method supports this by registering any configuration interfaces found under the root configuration class.
 
 ## Properties for child configuration types should be classes
-Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method uses reflection to walk the type hierarchy from the root configuration type by finding and recursing through all the properties.
+Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method walks the type hierarchy from the root configuration type at compile time using a source generator, finding and recursing through all the properties.
 
 For example, if the `First` property on `RootConfig` above was defined as `IFirstConfig` rather than `FirstConfig` then the `Second` property on `FirstConfig` would not be found and registered as a service. This is because the `IFirstConfig` does not define the `Second` property but `FirstConfig` does.
 

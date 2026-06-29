@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Neovolve.Configuration.DependencyInjection;
-using Neovolve.Configuration.DependencyInjection.Comparison;
+using Neovolve.Configuration.DependencyInjection.Generated;
 
 /// <summary>
 ///     The <see cref="ConfigureWithExtensions" /> class provides methods for configuring dependency injection of
@@ -80,14 +80,7 @@ public static class ConfigureWithExtensions
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
 
-        // Get the initial options which we need to do the recursion through configuration types
-        // NOTE: This configuration could be different to the singleton registered below which is used at the point of processing configuration updates
-        // The change in the singleton registration is with respect to LogReadOnlyPropertyLevel which is not used for the property recursion so this should be safe
-        var initialOptions = new ConfigureWithOptions();
-
-        configure(initialOptions);
-
-        return builder.ConfigureServices((_, services) =>
+        builder.ConfigureServices((_, services) =>
             {
                 // Add the options registration
                 services.AddSingleton(c =>
@@ -115,37 +108,21 @@ public static class ConfigureWithExtensions
                 services.AddSingleton<IConfigureWithOptions>(provider =>
                     provider.GetRequiredService<ConfigureWithOptions>());
 
-                services.AddChangeTracking();
-
                 // Add the default configuration updater if one is not already registered
                 services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
-            })
-            .RegisterConfigurationRoot<T>(initialOptions);
-    }
+            });
 
-    internal static IServiceCollection AddChangeTracking(this IServiceCollection services)
-    {
-        // Register the value evaluators
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(NullChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(ReferenceChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(DictionaryChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(CollectionChangeEvaluator), ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(EquatableChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator),
-            typeof(ComparableChangeEvaluator),
-            ServiceLifetime.Singleton));
-        services.TryAddEnumerable(new ServiceDescriptor(typeof(IChangeEvaluator), typeof(EqualsChangeEvaluator),
-            ServiceLifetime.Singleton));
+        if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar) == false)
+        {
+            throw new InvalidOperationException(
+                $"No generated configuration registrar was found for '{typeof(T)}'. Ensure the "
+                + "Neovolve.Configuration.DependencyInjection source generator runs in the project that calls "
+                + "ConfigureWith.");
+        }
 
-        // Register the evaluator processor that uses all the evaluators
-        services.AddSingleton<IValueProcessor, ValueProcessor>();
-
-        return services;
+        // The source generator emits a strongly typed registrar for this root type, so the configuration graph
+        // is registered without runtime reflection.
+        return builder.ConfigureServices((context, services) =>
+            registrar!.Register(services, context.Configuration));
     }
 }
