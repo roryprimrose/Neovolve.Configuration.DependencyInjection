@@ -193,6 +193,19 @@ namespace Sample
         thirdConfigType.GetProperty("ThirdValue")!.GetValue(injected).Should().Be("updated");
     }
 
+    // The generator builds against Roslyn 4.8 so it loads on every supported consumer SDK (net472, net8.0,
+    // net9.0, net10.0 and netstandard2.0). Bumping that floor silently drops support on older SDKs, so this
+    // test fails if the generator ever references a newer Microsoft.CodeAnalysis than the documented floor.
+    [Fact]
+    public void GeneratorTargetsSupportedRoslynFloor()
+    {
+        var reference = typeof(ConfigureWithGenerator).Assembly
+            .GetReferencedAssemblies()
+            .Single(name => name.Name == "Microsoft.CodeAnalysis");
+
+        reference.Version.Should().Be(new Version(4, 8, 0, 0));
+    }
+
     [Fact]
     public void DoesNotGenerateWhenNoConfigureWithInvocation()
     {

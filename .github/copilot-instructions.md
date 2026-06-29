@@ -45,3 +45,8 @@ This library provides `IHostBuilder` and `IServiceCollection` extension methods 
 ## Project configuration
 
 - SDK-style projects, shared props in [Directory.Build.props](../Directory.Build.props), central package versions in [Directory.Packages.props](../Directory.Packages.props). No hardcoded secrets.
+
+## Temporary files
+
+- Any temporary files Copilot creates must live under the `.scratch` folder (gitignored), never elsewhere in the repo.
+- Place them in a per-session subfolder, e.g. `.scratch/<session>/`, and remove that folder once the files are no longer needed.
