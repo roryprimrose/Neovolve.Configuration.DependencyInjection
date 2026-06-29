@@ -41,18 +41,10 @@ public class HostBuilderExtensionsTests
         yield return new object[] { typeof(IOptionsMonitor<IThirdConfig>), configureReload };
     }
 
-    [Theory]
-    [InlineData(true, LogLevel.Warning)]
-    [InlineData(false, LogLevel.Debug)]
-    public void ConfigureWithConfiguresDefaultReadOnlyPropertyLogLevelBasedOnEnvironment(bool isDevelopment,
-        LogLevel expected)
+    [Fact]
+    public void ConfigureWithDefaultsReadOnlyPropertyLogLevelToNone()
     {
-        var hostEnvironment = Substitute.For<IHostEnvironment>();
-
-        hostEnvironment.EnvironmentName.Returns(isDevelopment ? "Development" : "Production");
-
         var builder = Host.CreateDefaultBuilder()
-            .ConfigureServices(services => { services.AddSingleton(hostEnvironment); })
             .ConfigureWith<Config>();
 
         using var host = builder.Build();
@@ -61,7 +53,7 @@ public class HostBuilderExtensionsTests
 
         var actual = scope.ServiceProvider.GetRequiredService<IConfigureWithOptions>();
 
-        actual.LogReadOnlyPropertyLevel.Should().Be(expected);
+        actual.LogReadOnlyPropertyLevel.Should().Be(LogLevel.None);
     }
 
     [Theory]
@@ -147,8 +139,7 @@ public class HostBuilderExtensionsTests
 
         var actual = host.Services.GetRequiredService(optionsType);
 
-        // Exclude log level because it is based on the current environment which is covered by different tests
-        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [Theory]
@@ -220,7 +211,7 @@ public class HostBuilderExtensionsTests
 
         var actual = host.Services.GetRequiredService(optionsType);
 
-        actual.Should().BeEquivalentTo(expected, opt => opt.Excluding(x => x.LogReadOnlyPropertyLevel));
+        actual.Should().BeEquivalentTo(expected);
     }
 
     [Fact]

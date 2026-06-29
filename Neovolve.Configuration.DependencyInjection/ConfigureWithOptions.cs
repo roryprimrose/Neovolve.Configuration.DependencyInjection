@@ -18,7 +18,7 @@
         public LogLevel LogPropertyChangeLevel { get; set; } = LogLevel.Information;
 
         /// <inheritdoc />
-        public LogLevel LogReadOnlyPropertyLevel { get; set; } = LogLevel.Warning;
+        public LogLevel LogReadOnlyPropertyLevel { get; set; } = LogLevel.None;
 
         /// <inheritdoc />
         public LogReadOnlyPropertyType LogReadOnlyPropertyType { get; set; } =
