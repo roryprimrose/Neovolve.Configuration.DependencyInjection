@@ -42,7 +42,7 @@
       The generator builds against Roslyn 4.8 (via a VersionOverride in the generator project); this
       repo-wide version is what the generator unit tests compile against to host the generator.
     -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" />
     <!-- The code fix unit tests host the fix in an AdhocWorkspace, which needs the Workspaces layer. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
   </ItemGroup>
