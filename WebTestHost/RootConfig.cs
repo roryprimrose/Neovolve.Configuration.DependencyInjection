@@ -1,6 +1,7 @@
 ﻿namespace WebTestHost;
 
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 
 public interface IConfig
 {
@@ -11,6 +12,7 @@ public class RootConfig : IConfig
 {
     public FirstConfig First { get; } = new();
 
+    [Required]
     public string RootValue { get; set; } = string.Empty;
 }
 
