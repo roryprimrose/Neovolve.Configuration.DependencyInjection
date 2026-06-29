@@ -7,6 +7,14 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "daily"
+    ignore:
+      # The source generator must stay on Roslyn 4.x so it loads on every supported consumer SDK
+      # (net472, net8.0, net9.0, net10.0, netstandard2.0). A 5.x bump raises the floor and silently
+      # drops older-SDK support, so block major updates. GeneratorTargetsSupportedRoslynFloor enforces 4.8.
+      - dependency-name: "Microsoft.CodeAnalysis.CSharp"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.CodeAnalysis.CSharp.Workspaces"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
