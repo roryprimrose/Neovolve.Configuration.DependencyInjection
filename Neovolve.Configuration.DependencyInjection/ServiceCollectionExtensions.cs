@@ -104,6 +104,9 @@ public static class ServiceCollectionExtensions
         // Add the default configuration updater if one is not already registered
         services.TryAddTransient<IConfigUpdater, DefaultConfigUpdater>();
 
+        // Add the default configuration validator if one is not already registered
+        services.TryAddSingleton<IConfigValidator, DefaultConfigValidator>();
+
         if (GeneratedConfigRegistry.TryGetRegistrar(typeof(T), out var registrar) == false)
         {
             throw new InvalidOperationException(

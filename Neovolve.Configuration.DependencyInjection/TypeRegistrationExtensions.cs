@@ -51,8 +51,11 @@
         public static IServiceCollection RegisterConfigType<T>(this IServiceCollection services,
             IConfigurationSection section) where T : class
         {
-            // Configure this type so that we can get access to IOptions<T>, IOptionsSnapshot<T> and IOptionsMonitor<T>
-            services.Configure<T>(section);
+            // Bind the type through the options pipeline and enforce data annotation validation at startup so invalid
+            // configuration fails fast instead of silently binding. Validation runs through any registered
+            // IValidateOptions<T> (data annotations here, plus source generated or custom validators), keeping the
+            // path reflection free for AOT when source generated validators are supplied.
+            services.AddOptions<T>().Bind(section).ValidateDataAnnotations().ValidateOnStart();
 
             // Configure the injection of T as a single instance
             // We want this to be a singleton so that we have a single instance that we can update when configuration changes
@@ -71,8 +74,6 @@
                     // This will work because the classes are reference types
                     monitor.OnChange((config, name) =>
                     {
-                        var updater = c.GetRequiredService<IConfigUpdater>();
-
                         // Figure out the logger to use
                         var factory = c.GetService<ILoggerFactory>();
                         ILogger? logger = null;
@@ -95,6 +96,18 @@
                                                               + ".ConfigureWith");
                             }
                         }
+
+                        // Validate the reloaded configuration before applying it. A failed reload keeps the previously
+                        // valid configuration so partial, fragmented updates are never applied (all-or-nothing).
+                        var validator = c.GetService<IConfigValidator>();
+
+                        if (validator != null
+                            && validator.IsValid(config, name, logger) == false)
+                        {
+                            return;
+                        }
+
+                        var updater = c.GetRequiredService<IConfigUpdater>();
 
                         updater.UpdateConfig(injectedValue, config, name, logger);
                     });

@@ -8,7 +8,7 @@ using Neovolve.Configuration.DependencyInjection.Generated;
 ///     class provides the default implementation for updating injected configuration values when configuration data
 ///     changes.
 /// </summary>
-public partial class DefaultConfigUpdater : IConfigUpdater
+internal partial class DefaultConfigUpdater : IConfigUpdater
 {
     private readonly IConfigureWithOptions _options;
 

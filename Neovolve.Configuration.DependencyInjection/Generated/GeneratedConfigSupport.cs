@@ -30,6 +30,10 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
         {
             var value = configuration.Get<TRoot>()!;
 
+            // The root type bypasses the options pipeline, so enforce data annotation validation here to fail fast on
+            // startup when the bound root configuration is invalid.
+            DefaultConfigValidator.ThrowOnInvalidDataAnnotations(value);
+
             services.AddSingleton(value);
 
             // The default configuration support registers IOptions<T> and related interfaces that just return a new
@@ -101,6 +105,9 @@ namespace Neovolve.Configuration.DependencyInjection.Generated
             where T : struct
         {
             var value = section.Get<T>();
+
+            // A struct also bypasses the options pipeline, so validate it on startup to fail fast on invalid values.
+            DefaultConfigValidator.ThrowOnInvalidDataAnnotations(value);
 
             // Box once so the concrete type and all its interfaces resolve to the same instance.
             object boxed = value;
