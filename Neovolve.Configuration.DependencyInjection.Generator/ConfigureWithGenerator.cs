@@ -100,6 +100,7 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
     private static void ReportNotHotReloadable(SourceProductionContext context, IEnumerable<RootModel> roots)
     {
         var reported = new HashSet<string>(StringComparer.Ordinal);
+        var reportedProperties = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var root in roots)
         {
@@ -120,6 +121,11 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                     continue;
                 }
 
+                var typeDisplayName = StripGlobal(configType.FullyQualifiedName);
+
+                var hasReadOnlyCollection = ReportReadOnlyCollections(context, configType, typeDisplayName, root,
+                    reportedProperties);
+
                 string reason;
                 string fix;
 
@@ -130,6 +136,14 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                 }
                 else if (configType.Properties.Count > 0 && configType.HasWritableProperty == false)
                 {
+                    if (hasReadOnlyCollection)
+                    {
+                        // The only members are read only collections, which NCDI002 reports with a specific,
+                        // actionable recommendation. Adding a setter there also satisfies NCDI001, so the generic
+                        // "no writable properties" warning would be redundant and is suppressed.
+                        continue;
+                    }
+
                     reason = "has no writable properties";
                     fix = "add settable properties or convert it to a mutable class";
                 }
@@ -147,17 +161,62 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                     ?? root.InvocationLocation?.ToLocation()
                     ?? Location.None;
 
-                var displayName = configType.FullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
-                    ? configType.FullyQualifiedName.Substring("global::".Length)
-                    : configType.FullyQualifiedName;
-
                 var pathDescription = DescribeConfigPaths(root, configType.FullyQualifiedName, pathsByType);
 
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.NotHotReloadable, location, displayName, reason, fix, pathDescription));
+                    DiagnosticDescriptors.NotHotReloadable, location, typeDisplayName, reason, fix, pathDescription));
             }
         }
     }
+
+    private static bool ReportReadOnlyCollections(SourceProductionContext context, ConfigTypeModel configType,
+        string typeDisplayName, RootModel root, HashSet<string> reportedProperties)
+    {
+        if (configType.IsValueType)
+        {
+            // A value type is registered as a one-time snapshot and is never hot reloaded, so its read only collection
+            // properties are not relevant to hot reload.
+            return false;
+        }
+
+        var found = false;
+
+        foreach (var property in configType.Properties)
+        {
+            if (property.IsReadOnlyMutableCollection == false)
+            {
+                continue;
+            }
+
+            found = true;
+
+            var key = configType.FullyQualifiedName + "." + property.Name;
+
+            if (reportedProperties.Add(key) == false)
+            {
+                continue;
+            }
+
+            var location = property.DeclarationLocation?.ToLocation()
+                ?? configType.DeclarationLocation?.ToLocation()
+                ?? root.InvocationLocation?.ToLocation()
+                ?? Location.None;
+
+            context.ReportDiagnostic(Diagnostic.Create(
+                DiagnosticDescriptors.ReadOnlyCollectionNotHotReloadable, location,
+                typeDisplayName + "." + property.Name));
+        }
+
+        return found;
+    }
+
+    private static string StripGlobal(string fullyQualifiedName)
+    {
+        return fullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
+            ? fullyQualifiedName.Substring("global::".Length)
+            : fullyQualifiedName;
+    }
+
 
     private static Dictionary<string, List<string>> BuildConfigPathLookup(RootModel root)
     {

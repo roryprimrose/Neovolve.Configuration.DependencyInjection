@@ -25,4 +25,21 @@ internal static class DiagnosticDescriptors
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink);
+
+    /// <summary>
+    ///     A configuration property is a read only mutable collection. It binds at startup but cannot be hot reloaded in
+    ///     place safely, so the author is advised to expose a settable property on the class and a read only property on
+    ///     any interface.
+    /// </summary>
+    public static readonly DiagnosticDescriptor ReadOnlyCollectionNotHotReloadable = new(
+        "NCDI002",
+        "Read-only collection configuration property cannot be hot reloaded",
+        "Configuration property '{0}' is a read-only collection; the injected instance binds it at startup but will not "
+        + "receive hot reload updates for it. Declare the property with a public getter and setter on the class so the "
+        + "reloaded collection is assigned atomically, and keep a get-only declaration on any interface so callers "
+        + "cannot replace it.",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        helpLinkUri: HelpLink);
 }

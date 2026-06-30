@@ -7,7 +7,8 @@ namespace Neovolve.Configuration.DependencyInjection.Generator;
 internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
 {
     public ConfigPropertyModel(string name, string typeFullyQualifiedName, bool canWrite, bool isValueType,
-        PropertyChangeKind changeKind, string? elementTypeFullyQualifiedName)
+        PropertyChangeKind changeKind, string? elementTypeFullyQualifiedName, bool isReadOnlyMutableCollection,
+        LocationInfo? declarationLocation)
     {
         Name = name;
         TypeFullyQualifiedName = typeFullyQualifiedName;
@@ -15,6 +16,8 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
         IsValueType = isValueType;
         ChangeKind = changeKind;
         ElementTypeFullyQualifiedName = elementTypeFullyQualifiedName;
+        IsReadOnlyMutableCollection = isReadOnlyMutableCollection;
+        DeclarationLocation = declarationLocation;
     }
 
     public bool Equals(ConfigPropertyModel other)
@@ -24,7 +27,9 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
             && CanWrite == other.CanWrite
             && IsValueType == other.IsValueType
             && ChangeKind == other.ChangeKind
-            && ElementTypeFullyQualifiedName == other.ElementTypeFullyQualifiedName;
+            && ElementTypeFullyQualifiedName == other.ElementTypeFullyQualifiedName
+            && IsReadOnlyMutableCollection == other.IsReadOnlyMutableCollection
+            && Nullable.Equals(DeclarationLocation, other.DeclarationLocation);
     }
 
     public override bool Equals(object? obj)
@@ -42,6 +47,8 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
         hash = (hash * 31) + IsValueType.GetHashCode();
         hash = (hash * 31) + ChangeKind.GetHashCode();
         hash = (hash * 31) + (ElementTypeFullyQualifiedName?.GetHashCode() ?? 0);
+        hash = (hash * 31) + IsReadOnlyMutableCollection.GetHashCode();
+        hash = (hash * 31) + (DeclarationLocation?.GetHashCode() ?? 0);
 
         return hash;
     }
@@ -50,7 +57,11 @@ internal readonly struct ConfigPropertyModel : IEquatable<ConfigPropertyModel>
 
     public PropertyChangeKind ChangeKind { get; }
 
+    public LocationInfo? DeclarationLocation { get; }
+
     public string? ElementTypeFullyQualifiedName { get; }
+
+    public bool IsReadOnlyMutableCollection { get; }
 
     public bool IsValueType { get; }
 
