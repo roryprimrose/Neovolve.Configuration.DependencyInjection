@@ -376,12 +376,14 @@ namespace Sample
 
         harness.GeneratorDiagnostics.Should()
             .Contain(diagnostic => diagnostic.Id == "NCDI001"
-                && diagnostic.GetMessage().Contains("Sample.SettingsStruct"));
+                && diagnostic.GetMessage().Contains("Sample.SettingsStruct")
+                && diagnostic.GetMessage().Contains("Sample.RootConfig")
+                && diagnostic.GetMessage().Contains("Settings"));
 
-        // The root is not hot reloaded, so it is never reported.
+        // The root is not hot reloaded, so it is never reported as the not hot reloadable type.
         harness.GeneratorDiagnostics.Should()
             .NotContain(diagnostic => diagnostic.Id == "NCDI001"
-                && diagnostic.GetMessage().Contains("Sample.RootConfig"));
+                && diagnostic.GetMessage().Contains("'Sample.RootConfig' cannot be hot reloaded"));
     }
 
     [Fact]
@@ -411,7 +413,46 @@ namespace Sample
         harness.GeneratorDiagnostics.Should()
             .Contain(diagnostic => diagnostic.Id == "NCDI001"
                 && diagnostic.GetMessage().Contains("Sample.ChildRecord")
-                && diagnostic.GetMessage().Contains("no writable properties"));
+                && diagnostic.GetMessage().Contains("no writable properties")
+                && diagnostic.GetMessage().Contains("Sample.RootConfig")
+                && diagnostic.GetMessage().Contains("Child"));
+    }
+
+    [Fact]
+    public void ReportsNotHotReloadableWithNestedConfigurationPath()
+    {
+        const string source = @"
+namespace Sample
+{
+    using Microsoft.Extensions.Hosting;
+
+    public sealed record EndpointRecord(string Host, int Port);
+
+    public sealed class ServiceConfig
+    {
+        public EndpointRecord Endpoint { get; set; } = new(string.Empty, 0);
+        public string ServiceValue { get; set; } = string.Empty;
+    }
+
+    public sealed class RootConfig
+    {
+        public ServiceConfig Service { get; set; } = new();
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.EndpointRecord")
+                && diagnostic.GetMessage().Contains("Service:Endpoint")
+                && diagnostic.GetMessage().Contains("Sample.RootConfig"));
     }
 
     [Fact]

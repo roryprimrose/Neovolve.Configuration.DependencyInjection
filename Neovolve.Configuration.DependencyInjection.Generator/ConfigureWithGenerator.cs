@@ -103,6 +103,8 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
 
         foreach (var root in roots)
         {
+            var pathsByType = BuildConfigPathLookup(root);
+
             foreach (var configType in root.ConfigTypes)
             {
                 if (configType.FullyQualifiedName == root.RootTypeFullyQualifiedName)
@@ -149,11 +151,58 @@ public sealed class ConfigureWithGenerator : IIncrementalGenerator
                     ? configType.FullyQualifiedName.Substring("global::".Length)
                     : configType.FullyQualifiedName;
 
+                var pathDescription = DescribeConfigPaths(root, configType.FullyQualifiedName, pathsByType);
+
                 context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.NotHotReloadable, location, displayName, reason, fix));
+                    DiagnosticDescriptors.NotHotReloadable, location, displayName, reason, fix, pathDescription));
             }
         }
     }
+
+    private static Dictionary<string, List<string>> BuildConfigPathLookup(RootModel root)
+    {
+        var pathsByType = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+
+        foreach (var registration in root.Registrations)
+        {
+            if (pathsByType.TryGetValue(registration.TypeFullyQualifiedName, out var paths) == false)
+            {
+                paths = new List<string>();
+                pathsByType[registration.TypeFullyQualifiedName] = paths;
+            }
+
+            if (paths.Contains(registration.SectionPath) == false)
+            {
+                paths.Add(registration.SectionPath);
+            }
+        }
+
+        return pathsByType;
+    }
+
+    private static string DescribeConfigPaths(RootModel root, string typeFullyQualifiedName,
+        Dictionary<string, List<string>> pathsByType)
+    {
+        if (pathsByType.TryGetValue(typeFullyQualifiedName, out var paths) == false
+            || paths.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var rootDisplay = root.RootTypeFullyQualifiedName.StartsWith("global::", StringComparison.Ordinal)
+            ? root.RootTypeFullyQualifiedName.Substring("global::".Length)
+            : root.RootTypeFullyQualifiedName;
+
+        var orderedPaths = paths.ToList();
+
+        orderedPaths.Sort(StringComparer.Ordinal);
+
+        var quotedPaths = string.Join("', '", orderedPaths);
+        var pathLabel = orderedPaths.Count == 1 ? "configuration path" : "configuration paths";
+
+        return $". It is bound under root configuration type '{rootDisplay}' at {pathLabel} '{quotedPaths}'";
+    }
+
 
     private static bool HasModuleInitializer(Compilation compilation)
     {
