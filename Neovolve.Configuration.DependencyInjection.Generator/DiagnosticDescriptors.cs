@@ -20,7 +20,7 @@ internal static class DiagnosticDescriptors
         "NCDI001",
         "Configuration type cannot be hot reloaded",
         "Configuration type '{0}' cannot be hot reloaded because it {1}; injected instances will not receive "
-        + "configuration updates - {2}",
+        + "configuration updates - {2}{3}",
         Category,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
