@@ -98,8 +98,14 @@ internal static class ConfigGraphWalker
                 deepTypes.Add(deepType);
             }
 
+            // A read only property whose type is a mutable generic collection binds at startup (the binder adds items
+            // to the existing instance) but cannot be safely hot reloaded in place, so it is reported by NCDI002 with a
+            // recommendation to make the property settable on the class.
+            var isReadOnlyMutableCollection = canWrite == false
+                && IsMutableGenericCollection(property.Type, compilation);
+
             propertyModels.Add(new ConfigPropertyModel(property.Name, propertyTypeName, canWrite, isValueType,
-                changeKind, elementTypeName));
+                changeKind, elementTypeName, isReadOnlyMutableCollection, LocationInfo.CreateFrom(property)));
         }
 
         return new ConfigTypeModel(typeName, new EquatableArray<ConfigPropertyModel>(propertyModels.ToImmutable()),
@@ -224,6 +230,42 @@ internal static class ConfigGraphWalker
         }
 
         return null;
+    }
+
+    private static bool IsMutableGenericCollection(ITypeSymbol type, Compilation compilation)
+    {
+        // A type backed by ICollection<T> exposes Add/Clear so the configuration binder can populate it through a read
+        // only property at startup. IReadOnlyCollection<T>/IReadOnlyList<T> do not qualify because they cannot be added
+        // to, and a string is excluded even though it is enumerable.
+        if (type.SpecialType == SpecialType.System_String)
+        {
+            return false;
+        }
+
+        var collectionDefinition = compilation.GetTypeByMetadataName("System.Collections.Generic.ICollection`1");
+
+        if (collectionDefinition == null)
+        {
+            return false;
+        }
+
+        if (type is INamedTypeSymbol named
+            && named.IsGenericType
+            && SymbolEqualityComparer.Default.Equals(named.OriginalDefinition, collectionDefinition))
+        {
+            return true;
+        }
+
+        foreach (var implemented in type.AllInterfaces)
+        {
+            if (implemented.IsGenericType
+                && SymbolEqualityComparer.Default.Equals(implemented.OriginalDefinition, collectionDefinition))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool ImplementsNonGenericICollection(ITypeSymbol type, Compilation compilation)

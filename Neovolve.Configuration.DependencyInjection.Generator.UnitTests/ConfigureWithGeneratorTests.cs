@@ -464,6 +464,151 @@ namespace Sample
     }
 
     [Fact]
+    public void ReportsReadOnlyCollectionInsteadOfNotHotReloadable()
+    {
+        const string source = @"
+namespace Sample
+{
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class RequiredDataConfig
+    {
+        public ICollection<string> RequiredData { get; } = new Collection<string>();
+    }
+
+    public sealed class RootConfig
+    {
+        public RequiredDataConfig Required { get; set; } = new();
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI002"
+                && diagnostic.GetMessage().Contains("Sample.RequiredDataConfig.RequiredData"));
+
+        // The more specific NCDI002 replaces the generic NCDI001 for a type whose only members are read-only
+        // collections.
+        harness.GeneratorDiagnostics.Should()
+            .NotContain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.RequiredDataConfig"));
+    }
+
+    [Fact]
+    public void ReportsReadOnlyCollectionOnTypeWithWritableProperties()
+    {
+        const string source = @"
+namespace Sample
+{
+    using System.Collections.Generic;
+    using System.Collections.ObjectModel;
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class ServerConfig
+    {
+        public string Name { get; set; } = string.Empty;
+        public ICollection<string> Tags { get; } = new Collection<string>();
+    }
+
+    public sealed class RootConfig
+    {
+        public ServerConfig Server { get; set; } = new();
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI002"
+                && diagnostic.GetMessage().Contains("Sample.ServerConfig.Tags"));
+
+        harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI001");
+    }
+
+    [Fact]
+    public void DoesNotReportReadOnlyCollectionForWritableCollectionProperty()
+    {
+        const string source = @"
+namespace Sample
+{
+    using System.Collections.Generic;
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class ServerConfig
+    {
+        public string Name { get; set; } = string.Empty;
+        public ICollection<string> Tags { get; set; } = new List<string>();
+    }
+
+    public sealed class RootConfig
+    {
+        public ServerConfig Server { get; set; } = new();
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI002");
+    }
+
+    [Fact]
+    public void ReportsNotHotReloadableForReadOnlyNonMutableCollection()
+    {
+        const string source = @"
+namespace Sample
+{
+    using System.Collections.Generic;
+    using Microsoft.Extensions.Hosting;
+
+    public sealed class ReadOnlyListConfig
+    {
+        public IReadOnlyList<string> Items { get; } = new List<string>();
+    }
+
+    public sealed class RootConfig
+    {
+        public ReadOnlyListConfig ReadOnly { get; set; } = new();
+        public string RootValue { get; set; } = string.Empty;
+    }
+
+    public static class Caller
+    {
+        public static void Configure(IHostBuilder builder) => builder.ConfigureWith<RootConfig>();
+    }
+}";
+
+        var harness = GeneratorTestHarness.Run(source);
+
+        // An IReadOnlyList<T> has no Add, so the binder cannot populate it through a read-only property; it is a
+        // genuine NCDI001 case and is not a NCDI002 read-only mutable collection.
+        harness.GeneratorDiagnostics.Should().NotContain(diagnostic => diagnostic.Id == "NCDI002");
+        harness.GeneratorDiagnostics.Should()
+            .Contain(diagnostic => diagnostic.Id == "NCDI001"
+                && diagnostic.GetMessage().Contains("Sample.ReadOnlyListConfig"));
+    }
+
+    [Fact]
     public void ExcludesPropertyAndTypeMarkedToSkip()
     {
         const string source = @"

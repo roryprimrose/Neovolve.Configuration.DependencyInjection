@@ -20,6 +20,7 @@ The **Neovolve.Configuration.DependencyInjection** NuGet package provides `IHost
   - [Excluding properties and types](#excluding-properties-and-types)
 - [Recommendations](#recommendations)
   - [Use read-only interface definitions for configuration types](#use-read-only-interface-definitions-for-configuration-types)
+  - [Collection properties must be settable on the class to hot reload](#collection-properties-must-be-settable-on-the-class-to-hot-reload)
   - [Properties for child configuration types should be classes](#properties-for-child-configuration-types-should-be-classes)
   - [Avoid resolving the root config service](#avoid-resolving-the-root-config-service)
 
@@ -302,7 +303,7 @@ public class DiagnosticState
 [assembly: SkipConfigType(typeof(SomeThirdPartyType))]
 ```
 
-The generator also reports diagnostic **NCDI001** when a configuration type in the graph cannot be hot reloaded (see [Configuration types must be mutable classes to hot reload](#configuration-types-must-be-mutable-classes-to-hot-reload)). A code fix is included to convert a `struct` configuration type into a class.
+The generator also reports diagnostic **NCDI001** when a configuration type in the graph cannot be hot reloaded (see [Configuration types must be mutable classes to hot reload](#configuration-types-must-be-mutable-classes-to-hot-reload)). A code fix is included to convert a `struct` configuration type into a class. It reports diagnostic **NCDI002** for a get-only collection property that binds at startup but cannot be hot reloaded (see [Collection properties must be settable on the class to hot reload](#collection-properties-must-be-settable-on-the-class-to-hot-reload)), with code fixes that add the setter or apply `[SkipConfigProperty]`.
 
 # Recommendations
 
@@ -310,6 +311,54 @@ The generator also reports diagnostic **NCDI001** when a configuration type in t
 Configuration class definitions require that properties are mutable to allow the configuration binding system to set the values. There is a risk of an application class mutating the configuration data after it is injected into a class constructor. The way to prevent unintended mutation of configuration data at runtime is to define a read-only interface for the configuration class. This will allow the configuration system to set the values but the application code will not be able to change the values.
 
 The `ConfigureWith<T>` extension method supports this by registering any configuration interfaces found under the root configuration class.
+
+Declare the properties as settable on the class so the configuration binder can assign the values and hot reload can update them, and expose them as get-only on the interface so application code cannot mutate the configuration after it is injected:
+
+```csharp
+public interface IServerConfig
+{
+    // Get-only on the interface: application code cannot change the values.
+    string Name { get; }
+    int Port { get; }
+}
+
+public class ServerConfig : IServerConfig
+{
+    // Get/set on the class: the binder assigns the values and hot reload updates them.
+    public string Name { get; set; } = string.Empty;
+    public int Port { get; set; }
+}
+```
+
+Inject `IServerConfig` (rather than `ServerConfig`) into application classes so they get read-only access to the configuration while still receiving hot reload updates.
+
+## Collection properties must be settable on the class to hot reload
+A collection configuration property (for example `ICollection<T>`, `IList<T>`, `ISet<T>` or a concrete `List<T>`) is bound at application startup whether or not the property has a setter, because the configuration binder adds the items into the existing collection instance. This happens during startup before the instance is injected anywhere, so the in-place population is safe.
+
+Hot reload is different. The library hot reloads by assigning the reloaded value onto the injected singleton, which is a single atomic reference assignment, so a reader sees either the whole previous value or the whole new value. A get-only collection property cannot be assigned, so the only way to update it at runtime would be to clear and refill the existing collection in place. That is not safe: application code enumerating the collection on another thread during the reload would observe a torn result or throw, because the mutation is not atomic. For this reason a get-only collection property is bound once at startup and is not hot reloaded.
+
+This limitation applies only to the raw injected types (the configuration class and its interfaces). It does not affect `IOptionsSnapshot<T>` or `IOptionsMonitor<T>`, which always reflect the latest configuration because each access binds a fresh instance with the collection populated from the current configuration. If a configuration type has a get-only collection that must observe changes at runtime, either make the property settable on the class (see below) or consume the configuration through `IOptionsSnapshot<T>`/`IOptionsMonitor<T>` instead of the raw injected type.
+
+To make a collection hot reload, declare it as a settable property (`{ get; set; }`) on the class so the reloaded collection is assigned atomically, and expose it as a get-only property on any interface so application code still cannot replace it:
+
+```csharp
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+
+public interface IRequiredDataConfig
+{
+    // Get-only on the interface: callers cannot replace the collection.
+    ICollection<ConfiguredData> RequiredData { get; }
+}
+
+public class RequiredDataConfig : IRequiredDataConfig
+{
+    // Get/set on the class: hot reload assigns the reloaded collection atomically.
+    public ICollection<ConfiguredData> RequiredData { get; set; } = new Collection<ConfiguredData>();
+}
+```
+
+The source generator reports a get-only collection property as warning **NCDI002**. Two code fixes are offered: one adds the setter for you, and one applies `[SkipConfigProperty]` to the property. If startup-only binding is intentional and the collection does not need to hot reload, keep the get-only property and either suppress NCDI002 for it or exclude it with `[SkipConfigProperty]`.
 
 ## Properties for child configuration types should be classes
 Assuming that any configuration interfaces hide unnecessary child configuration types, all properties that represent child configuration types should be defined as their classes rather than interfaces on the parent configuration class. The `ConfigureWith<T>` extension method walks the type hierarchy from the root configuration type at compile time using a source generator, finding and recursing through all the properties.
