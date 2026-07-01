@@ -52,7 +52,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
   </ItemGroup>
   <ItemGroup Label="Versioning. Referenced CI-only from Directory.Build.props; matches the GitVersion config.">
-    <PackageVersion Include="GitVersion.MsBuild" Version="6.7.0" />
+    <PackageVersion Include="GitVersion.MsBuild" Version="6.8.0" />
   </ItemGroup>
   <ItemGroup Label="Global Package References, added to every project">
     <GlobalPackageVersion Include="ReferenceTrimmer" Version="3.1.22" PrivateAssets="All" />
